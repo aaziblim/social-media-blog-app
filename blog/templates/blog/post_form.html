@@ -1,0 +1,33 @@
+<!-- users/templates/users/register.html -->
+{% extends "blog/base.html" %} {% load static %} {% load socialaccount %} 
+{%load crispy_forms_tags %} 
+{% block content %}
+<div
+  class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
+>
+  <div class="max-w-md w-full space-y-8">
+    <div>
+      <img
+        class="mx-auto h-12 w-auto"
+        src="{% static 'blog/logo.svg' %}"
+        alt="Logo"
+      />
+      {% csrf_token %}
+      <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        Blog Post
+      </h2>
+      <form method="POST" enctype="multipart/form-data" class="space-y-6">
+        {% csrf_token %} 
+        {{ form|crispy }}
+
+        <button
+          type="submit"
+          class="btn group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          Post
+        </button>
+      </form>
+      {% endblock content %}
+    </div>
+  </div>
+</div>

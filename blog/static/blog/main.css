@@ -1,0 +1,198 @@
+/* Custom Font */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+body {
+  font-family: "Inter", sans-serif;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fadeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Custom Prose Styles */
+.prose {
+  max-width: 65ch;
+  line-height: 1.75;
+}
+.prose h2 {
+  @apply text-3xl font-bold text-gray-900 mb-4 mt-8;
+}
+.prose p {
+  @apply text-gray-600 mb-6;
+}
+
+/* Delay animations for staggered effect */
+.animate-fade-in:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.animate-fade-in:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.animate-fade-in:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+/* Message animations */
+.alert {
+  animation: slideIn 0.3s ease-out forwards;
+}
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.inline-flex {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Navigation Bar */
+.site-header {
+  background-color: #fff;
+  padding: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.nav-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.navigation {
+  display: flex;
+  gap: 1rem;
+}
+
+.nav-link {
+  font-weight: 600;
+  color: #333;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+  color: #4338ca;
+}
+
+/* Authentication Buttons */
+.auth-button {
+  text-align: center;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Log In and Log Out Buttons */
+.auth-login {
+  /* border: 2px solid #e11d48; */
+  background-color: #007bff;
+  color: #fff;
+}
+
+.auth-logout {
+  border: 2px solid #e11d48;
+  color: #e11d48;
+}
+
+.auth-login:hover,
+.auth-logout:hover {
+  opacity: 0.6;
+}
+
+/* Register Button */
+.auth-register {
+  border: 2px solid #007bff;
+  /* background-color: #4338ca; */
+  color: #007bff;
+}
+
+.auth-register:hover {
+  opacity: 0.6;
+}
+
+.auth-create {
+  border: 2px solid;
+  background-color: green;
+}
+/* Footer Section */
+.footer {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  text-align: center;
+}
+
+.footer-nav {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.footer-link {
+  font-weight: 600;
+  color: #333;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.footer-link:hover {
+  color: #4338ca;
+}
+
+.connect-section {
+  margin-top: 1rem;
+}
+
+.newsletter-form input[type="email"] {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-bottom: 0.5rem;
+}
+
+.newsletter-form button {
+  width: 100%;
+  padding: 0.5rem;
+  background-color: #4338ca;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.newsletter-form button:hover {
+  background-color: #4338ca;
+}

@@ -1,0 +1,60 @@
+{% extends 'blog/base.html' %} {% block content %}
+<div class="space-y-12">
+  <!-- Page Header -->
+  <div class="text-center">
+    <h1 class="text-4xl font-bold text-gray-900 mb-4">About BazzChronicles</h1>
+    <p class="text-lg text-gray-600">Where technology meets storytelling</p>
+  </div>
+
+  <!-- Content Sections -->
+  <div class="space-y-8">
+    <!-- Our Story -->
+    <section class="bg-white p-8 rounded-xl shadow-sm">
+      <h2 class="text-2xl font-semibold text-gray-800 mb-4">Our Story</h2>
+      <p class="text-gray-600 leading-relaxed">
+        Founded in <strong>2024</strong>, Bazz Chronicles was born out of a passion for merging technology with storytelling. We believe that every innovation, every breakthrough, and every challenge in the tech world holds a compelling narrative waiting to be shared. Our goal is to simplify complex topics, spark curiosity, and keep our audience informed on the latest trends. Whether it’s cutting-edge advancements or timeless tech wisdom, we bring stories that matter.
+      </p>
+    </section>
+
+    <!-- Our Mission -->
+    <section class="bg-white p-8 rounded-xl shadow-sm">
+      <h2 class="text-2xl font-semibold text-gray-800 mb-4">Our Mission</h2>
+      <p class="text-gray-600 leading-relaxed">
+        To make technology accessible, insightful, and engaging through well-crafted content that educates, inspires, and empowers enthusiasts at all levels.
+      </p>
+    </section>
+
+    <!-- Team -->
+    <section class="bg-white p-8 rounded-xl shadow-sm">
+      <h2 class="text-2xl font-semibold text-gray-800 mb-6">Meet the Team</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Team Member 1 -->
+        <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+          <div
+            class="h-12 w-12 bg-indigo-100 rounded-full flex items-center justify-center"
+          >
+            <span class="text-indigo-600 font-medium">AZ</span>
+          </div>
+          <div>
+            <h3 class="font-medium text-gray-900">Abdul-Aziz Ziblim</h3>
+            <p class="text-sm text-gray-600">Founder & Lead Writer</p>
+          </div>
+        </div>
+
+        <!-- Team Member 2 -->
+        <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+          <div
+            class="h-12 w-12 bg-indigo-100 rounded-full flex items-center justify-center"
+          >
+            <span class="text-indigo-600 font-medium">EM</span>
+          </div>
+          <div>
+            <h3 class="font-medium text-gray-900">Erica Meltzer</h3>
+            <p class="text-sm text-gray-600">Technical Editor</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
