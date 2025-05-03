@@ -158,18 +158,21 @@ AUTHENTICATION_BACKENDS = (
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {
-            'client_id': "1981681319-f4f2tt7arcimb4rr80n69snr897la19o.apps.googleusercontent.com",
-            'secret': "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",
-            "redirect_uri": "http://localhost:8000/accounts/google/login/callback/",
+            'client_id': os.environ.get('GOOGLE_CLIENT_ID'),
+            'secret': os.environ.get('GOOGLE_CLIENT_SECRET'),
+            'redirect_uri': os.environ.get('GOOGLE_REDIRECT_URI'),
             'key': ''
-        },},
-        
-     'github': {
+        },
+    },
+    'github': {
         'APP': {
-            'client_id': "Ov23liYHzqpWhKmxT1i7",
-            'secret': "2e290139367d622d63ad317666c6cf46786ccf64",
-            "redirect_uri": "http://localhost:8000/accounts/github/login/callback/",
-            'key': ''    }}}
+            'client_id': os.environ.get('GITHUB_CLIENT_ID'),
+            'secret': os.environ.get('GITHUB_CLIENT_SECRET'),
+            'redirect_uri': os.environ.get('GITHUB_REDIRECT_URI'),
+            'key': ''
+        },
+    }
+}
 
 SOCIALACCOUNT_LOGIN_ON_GET = True
 
