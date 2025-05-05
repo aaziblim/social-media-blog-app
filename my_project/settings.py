@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
-
+from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -21,12 +21,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-2o6(iofux_r#i^x%9y-7(48wk^7gh5v8d%ngeksrlfa=i^j6=='
+SECRET_KEY =  config('DJANGO_SECRET_KEY', default=None)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DJANGO_DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = []
+
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 
 
 # Application definition
@@ -154,24 +155,29 @@ AUTHENTICATION_BACKENDS = (
     'allauth.account.auth_backends.AuthenticationBackend',
 )
 
+from dotenv import load_dotenv
 
-SOCIALACCOUNT_PROVIDERS = {
+# Load environment variables from the .env file
+load_dotenv()
+
+
+SSOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {
-            'client_id': os.environ.get('GOOGLE_CLIENT_ID'),
-            'secret': os.environ.get('GOOGLE_CLIENT_SECRET'),
-            'redirect_uri': os.environ.get('GOOGLE_REDIRECT_URI'),
+            'client_id': os.getenv('GOOGLE_CLIENT_ID'),
+            'secret': os.getenv('GOOGLE_CLIENT_SECRET'),
+            'redirect_uri': os.getenv('GOOGLE_REDIRECT_URI'),
             'key': ''
         },
     },
     'github': {
         'APP': {
-            'client_id': os.environ.get('GITHUB_CLIENT_ID'),
-            'secret': os.environ.get('GITHUB_CLIENT_SECRET'),
-            'redirect_uri': os.environ.get('GITHUB_REDIRECT_URI'),
+            'client_id': os.getenv('GITHUB_CLIENT_ID'),
+            'secret': os.getenv('GITHUB_CLIENT_SECRET'),
+            'redirect_uri': os.getenv('GITHUB_REDIRECT_URI'),
             'key': ''
         },
-    }
+    },
 }
 
 SOCIALACCOUNT_LOGIN_ON_GET = True
