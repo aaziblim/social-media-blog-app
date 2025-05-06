@@ -183,22 +183,23 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-SSOCIALACCOUNT_PROVIDERS = {
+SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {
             'client_id': os.getenv('GOOGLE_CLIENT_ID'),
             'secret': os.getenv('GOOGLE_CLIENT_SECRET'),
-            'redirect_uri': os.getenv('GOOGLE_REDIRECT_URI'),
             'key': ''
         },
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'}
     },
     'github': {
         'APP': {
             'client_id': os.getenv('GITHUB_CLIENT_ID'),
             'secret': os.getenv('GITHUB_CLIENT_SECRET'),
-            'redirect_uri': os.getenv('GITHUB_REDIRECT_URI'),
             'key': ''
         },
+        'SCOPE': ['user']
     },
 }
 
