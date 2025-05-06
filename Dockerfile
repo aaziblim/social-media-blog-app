@@ -24,7 +24,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project files
 COPY . /app/
 
-COPY ./my_project/media /app/media
+COPY ./media /app/media
 
 
 # Copy entrypoint script
