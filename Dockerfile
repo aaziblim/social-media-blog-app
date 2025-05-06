@@ -21,10 +21,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
+
+COPY media /app/media/
 # Copy project files
 COPY . /app/
 
-COPY media /app/media/
+
 
 # Copy entrypoint script
 COPY entrypoint.sh /app/entrypoint.sh
