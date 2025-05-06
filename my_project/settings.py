@@ -27,7 +27,7 @@ SECRET_KEY =  config('DJANGO_SECRET_KEY', default=None)
 DEBUG = config('DJANGO_DEBUG', default=False, cast=bool)
 
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'my-project-latest.onrender.com']
 
 
 # Application definition
