@@ -191,10 +191,7 @@ SOCIALACCOUNT_PROVIDERS = {
             'key': ''
         },
         'SCOPE': ['profile', 'email'],
-        'AUTH_PARAMS': {'access_type': 'online'},
-        'VERIFIED_EMAIL': True,
-        'OAUTH_PKCE_ENABLED': True,
-        
+        'AUTH_PARAMS': {'access_type': 'online'}
     },
     'github': {
         'APP': {
@@ -206,11 +203,6 @@ SOCIALACCOUNT_PROVIDERS = {
     },
 }
 
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_EMAIL_VERIFICATION = 'none'  # You can change this to 'mandatory' in production
-ACCOUNT_AUTHENTICATION_METHOD = 'username_email'  # Allow login with either username or email
-
-SOCIALACCOUNT_CALLBACK_URL = os.getenv('OAUTH_CALLBACK_DOMAIN', 'https://my-project-latest.onrender.com')
 SOCIALACCOUNT_LOGIN_ON_GET = True
 
 CRISPY_TEMPLATE_PACK = "tailwind"  # ✅ If using Tailwind CSS
