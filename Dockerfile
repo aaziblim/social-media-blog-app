@@ -47,4 +47,4 @@ USER django
 
 
 
-CMD ["gunicorn", "my_project.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["sh", "-c", "python manage.py migrate && gunicorn my_project.wsgi:application --bind 0.0.0.0:8000"]
