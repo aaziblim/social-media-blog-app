@@ -95,15 +95,20 @@ WSGI_APPLICATION = 'my_project.wsgi.application'
 #     }
 # }
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': config('DB_NAME', default=None),
+#         'USER': config('DB_USER', default=None),
+#         'PASSWORD': config('DB_PASSWORD', default=None),
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#     }
+# }
+
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default=None),
-        'USER': config('DB_USER', default=None),
-        'PASSWORD': config('DB_PASSWORD', default=None),
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.config(conn_max_age=600, ssl_require=True)
 }
 
 

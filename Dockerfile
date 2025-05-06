@@ -1,6 +1,6 @@
 FROM python:3.13-slim
 
-# Setting environment variables
+# Environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
     gettext \
     && rm -rf /var/lib/apt/lists/*
 
-# Set work directory
+# Set working directory
 WORKDIR /app
 
 # Install Python dependencies
@@ -20,31 +20,20 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project
+# Copy project files
 COPY . /app/
 
-# Debug step - print directory contents to verify files
-RUN echo "Listing application files:" && ls -la /app/
+# Copy entrypoint script
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 # Collect static files
 RUN python manage.py collectstatic --noinput
 
-
-# Create entrypoint script for proper startup sequence
-RUN echo '#!/bin/bash\n\
-echo "Applying database migrations..."\n\
-python manage.py makemigrations\n\
-python manage.py migrate\n\
-echo "Starting Gunicorn server..."\n\
-exec gunicorn my_project.wsgi:application --bind 0.0.0.0:8000\n\
-' > /app/entrypoint.sh
-
-RUN chmod +x /app/entrypoint.sh
-
+# Set permissions and user
 RUN groupadd -r django && useradd -r -g django django
 RUN chown -R django:django /app
 USER django
 
-
-
-CMD [ "gunicorn", "my_project.wsgi:application", "--bind", "0.0.0.0:8000"]
+# Run entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]
