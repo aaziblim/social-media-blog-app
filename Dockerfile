@@ -1,10 +1,8 @@
 FROM python:3.13-slim
 
-# Set environment variables
+# Setting environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-# Add any other environment variables your app needs
-# ENV DJANGO_SETTINGS_MODULE=my_project.settings.production
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -31,8 +29,6 @@ RUN echo "Listing application files:" && ls -la /app/
 # Collect static files
 RUN python manage.py collectstatic --noinput
 
-# Don't run migrations during build - will run them at startup instead
-# This ensures migrations run against the actual database
 
 # Create entrypoint script for proper startup sequence
 RUN echo '#!/bin/bash\n\
@@ -45,11 +41,10 @@ exec gunicorn my_project.wsgi:application --bind 0.0.0.0:8000\n\
 
 RUN chmod +x /app/entrypoint.sh
 
-# Create a non-privileged user to run the application
 RUN groupadd -r django && useradd -r -g django django
 RUN chown -R django:django /app
 USER django
 
-# Set the entrypoint
+
 
 CMD ["gunicorn", "my_project.wsgi:application", "--bind", "0.0.0.0:8000"]
