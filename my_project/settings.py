@@ -191,7 +191,10 @@ SOCIALACCOUNT_PROVIDERS = {
             'key': ''
         },
         'SCOPE': ['profile', 'email'],
-        'AUTH_PARAMS': {'access_type': 'online'}
+        'AUTH_PARAMS': {'access_type': 'online'},
+        # Add these settings
+        'VERIFIED_EMAIL': True,
+        'OAUTH_PKCE_ENABLED': True,
     },
     'github': {
         'APP': {
@@ -199,9 +202,12 @@ SOCIALACCOUNT_PROVIDERS = {
             'secret': os.getenv('GITHUB_CLIENT_SECRET'),
             'key': ''
         },
-        'SCOPE': ['user']
+        'SCOPE': ['user'],
+        # Add this setting
+        'OAUTH_PKCE_ENABLED': True,
     },
 }
+
 
 SOCIALACCOUNT_LOGIN_ON_GET = True
 
