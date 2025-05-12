@@ -186,16 +186,16 @@ load_dotenv()
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {
-            'client_id': config('GOOGLE_CLIENT_ID'),
-            'secret': config('GOOGLE_CLIENT_SECRET'),
+            'client_id': config('GOOGLE_CLIENT_ID', default=None),
+            'secret': config('GOOGLE_CLIENT_SECRET', default=None),
             'key': ''
         },
 
     },
     'github': {
         'APP': {
-            'client_id': config('GITHUB_CLIENT_ID'),
-            'secret': config('GITHUB_CLIENT_SECRET'),
+            'client_id': config('GITHUB_CLIENT_ID', default=None),
+            'secret': config('GITHUB_CLIENT_SECRET', default=None),
             'key': ''
         },
     },
