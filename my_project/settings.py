@@ -186,25 +186,18 @@ load_dotenv()
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {
-            'client_id': os.getenv('GOOGLE_CLIENT_ID'),
-            'secret': os.getenv('GOOGLE_CLIENT_SECRET'),
+            'client_id': config('GOOGLE_CLIENT_ID'),
+            'secret': config('GOOGLE_CLIENT_SECRET'),
             'key': ''
         },
-        'SCOPE': ['profile', 'email'],
-        'AUTH_PARAMS': {'access_type': 'online'},
-        # Add these settings
-        'VERIFIED_EMAIL': True,
-        'OAUTH_PKCE_ENABLED': True,
+
     },
     'github': {
         'APP': {
-            'client_id': os.getenv('GITHUB_CLIENT_ID'),
-            'secret': os.getenv('GITHUB_CLIENT_SECRET'),
+            'client_id': config('GITHUB_CLIENT_ID'),
+            'secret': config('GITHUB_CLIENT_SECRET'),
             'key': ''
         },
-        'SCOPE': ['user'],
-        # Add this setting
-        'OAUTH_PKCE_ENABLED': True,
     },
 }
 
