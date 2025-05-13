@@ -245,6 +245,7 @@ cython_debug/
 # pytype static type analyzer
 
 # Cython debug symbols
+staticfiles/
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
