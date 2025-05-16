@@ -117,10 +117,17 @@ WSGI_APPLICATION = 'my_project.wsgi.application'
 #     }
 # }
 
-
 DATABASES = {
-    'default': dj_database_url.config(conn_max_age=600, ssl_require=True)
+    'default': dj_database_url.config(
+        default='sqlite:///db.sqlite3',  # Local fallback
+        conn_max_age=600,
+        ssl_require=False,  # Set to True only for production PostgreSQL
+    )
 }
+
+# For production, enable SSL
+if os.environ.get('ENVIRONMENT') == 'production':
+    DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
 
 AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default=None)
 AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default=None)
