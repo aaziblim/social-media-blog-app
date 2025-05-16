@@ -27,9 +27,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY =  config('DJANGO_SECRET_KEY', default=None)
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DJANGO_DEBUG', default=False, cast=bool)
+DEBUG = config('DJANGO_DEBUG', default=False)
 
 # Add to settings.py
 if not DEBUG:
@@ -232,3 +231,42 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 
 CRISPY_TEMPLATE_PACK = "tailwind"  # ✅ If using Tailwind CSS
 CRISPY_ALLOWED_TEMPLATE_PACKS = "tailwind" # ✅ If using Tailwind CSS and Bootstrap 5
+
+
+
+
+
+# Add this at the end of your settings.py file
+
+from django.db.utils import ProgrammingError, OperationalError
+import django
+from django.conf import settings
+
+def create_default_site():
+    # Only run this code if sites app is installed
+    if 'django.contrib.sites' in settings.INSTALLED_APPS:
+        from django.contrib.sites.models import Site
+        
+        # Ensure SITE_ID is set
+        if not hasattr(settings, 'SITE_ID'):
+            settings.SITE_ID = 1
+            
+        # Try to create the default site if it doesn't exist
+        try:
+            Site.objects.get_or_create(
+                id=settings.SITE_ID,
+                defaults={
+                    'domain': 'my-project-latest.onrender.com',
+                    'name': 'My Project'
+                }
+            )
+        except (ProgrammingError, OperationalError):
+            # Database might not be ready yet, which is fine
+            pass
+
+# Try to create the site when Django initializes
+try:
+    create_default_site()
+except:
+    # If there's any error, we'll handle it gracefully
+    pass
