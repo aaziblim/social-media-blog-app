@@ -12,8 +12,8 @@ from django.db import IntegrityError
 
 try:
     site, created = Site.objects.get_or_create(id=1)
-    site.domain = 'yourdomain.onrender.com'  # Replace with your actual Render domain
-    site.name = 'Your Site'  # Can be any name
+    site.domain = 'my-project-latest.onrender.com'  # Replace with your actual Render domain
+    site.name = 'My Project'  # Can be any name
     site.save()
 except IntegrityError as e:
     print("Site already exists and couldn't be updated:", e)
