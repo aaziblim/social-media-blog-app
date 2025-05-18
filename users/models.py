@@ -1,12 +1,4 @@
 from django.db import models
-from django import forms
-from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth.models import User
-from PIL import Image
-from django.urls import reverse
-
-
-from django.db import models
 from django.contrib.auth.models import User
 from django.urls import reverse
 from PIL import Image
@@ -25,10 +17,12 @@ class Profile(models.Model):
         return reverse('post-detail', kwargs={'pk': self.pk})
 
     def save(self, *args, **kwargs):
+        # Save first to get access to self.image.file
         super().save(*args, **kwargs)
 
         if self.image:
             try:
+                # Open image from file-like object (works with S3)
                 img = Image.open(self.image)
 
                 if img.height > 300 or img.width > 300:
@@ -39,12 +33,12 @@ class Profile(models.Model):
                     img.save(buffer, format='JPEG')
                     buffer.seek(0)
 
+                    # Overwrite original image with resized one
                     self.image.save(self.image.name, ContentFile(buffer.read()), save=False)
                     buffer.close()
 
-                    super().save(*args, **kwargs)  # Save resized image
+                    # Save again with resized image
+                    super().save(*args, **kwargs)
+
             except Exception as e:
-                # Optional: log or handle the error
                 print(f"Image resizing failed: {e}")
-
-
