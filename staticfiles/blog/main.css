@@ -114,11 +114,15 @@ body {
 }
 
 /* Log In and Log Out Buttons */
-.auth-login,
-.auth-logout {
+.auth-login {
   /* border: 2px solid #e11d48; */
   background-color: #007bff;
   color: #fff;
+}
+
+.auth-logout {
+  border: 2px solid #e11d48;
+  color: #e11d48;
 }
 
 .auth-login:hover,
@@ -137,6 +141,10 @@ body {
   opacity: 0.6;
 }
 
+.auth-create {
+  border: 2px solid;
+  background-color: green;
+}
 /* Footer Section */
 .footer {
   background-color: #f8f9fa;
