@@ -21,3 +21,12 @@ urlpatterns = [
 
 if settings.DEBUG:
  urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+
+ from django.contrib.sites.models import Site
+
+# temporarily run this
+Site.objects.update_or_create(id=1, defaults={
+    'domain': 'my-project-latest.onrender.com',
+    'name': 'My Project'
+})
