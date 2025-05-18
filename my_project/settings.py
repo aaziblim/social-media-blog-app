@@ -176,7 +176,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'blog/static']
-MEDIA_URL = "https://myprojectawsbuckets3.s3.amazonaws.com/media/"                                      
+MEDIA_URL = "https://myprojectawsbuckets3.s3.amazonaws.com/"                                      
 
  #'/media/' 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
