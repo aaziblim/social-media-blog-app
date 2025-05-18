@@ -43,6 +43,7 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'my-project-latest.onrende
 # Application definition
 
 INSTALLED_APPS = [
+    'storages',
     'crispy_forms',
     'crispy_bootstrap5',
     'crispy_tailwind',
