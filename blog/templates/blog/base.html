@@ -67,9 +67,11 @@
     
           <!-- Mobile: Only Show "Create Post" Button -->
           {% if user.is_authenticated %}
-          <a href="{% url 'post-create' %}" class="md:hidden px-4 py-2 text-white bg-green-600 hover:bg-green-500 font-medium rounded-lg shadow-md transition duration-300">
-            Create Post
-          </a>
+          <div class="block md:hidden w-full flex justify-center mb-4">
+  <a href="{% url 'post-create' %}" class="px-4 py-2 text-white bg-green-600 hover:bg-green-500 font-medium rounded-lg shadow-md transition duration-300">
+    Create Post
+  </a>
+</div>
           {% endif %}
     
           <!-- Mobile Menu Button -->
