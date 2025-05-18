@@ -137,6 +137,7 @@ AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default=None)
 AWS_S3_SIGNATURE_NAME = 's3v4',
 AWS_S3_REGION_NAME = 'eu-north-1'
 AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = 'public-read'
 AWS_QUERYSTRING_AUTH = False
 AWS_DEFAULT_ACL = None
 AWS_S3_VERITY = True
@@ -178,7 +179,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'blog/static']
-MEDIA_URL = "https://myprojectawsbuckets3.s3.amazonaws.com/"                                      
+MEDIA_URL = "https://myprojectawsbuckets3.s3.amazonaws.com/media/"                                      
 
  #'/media/' 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
