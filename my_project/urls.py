@@ -6,6 +6,18 @@ from django.conf import settings
 from django.conf.urls.static import static
 from blog import views as blog_views
 
+
+from django.contrib.sites.models import Site
+from django.db import IntegrityError
+
+try:
+    site, created = Site.objects.get_or_create(id=1)
+    site.domain = 'yourdomain.onrender.com'  # Replace with your actual Render domain
+    site.name = 'Your Site'  # Can be any name
+    site.save()
+except IntegrityError as e:
+    print("Site already exists and couldn't be updated:", e)
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('register/', user_views.register, name='register'),
@@ -23,10 +35,3 @@ if settings.DEBUG:
  urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 
- from django.contrib.sites.models import Site
-
-# temporarily run this
-Site.objects.update_or_create(id=1, defaults={
-    'domain': 'my-project-latest.onrender.com',
-    'name': 'My Project'
-})

@@ -10,3 +10,5 @@ urlpatterns = [
      path('', PostListView.as_view(), name='blog-home'),
     path('about/', views.about, name='blog-about'),
 ]
+
+
