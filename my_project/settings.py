@@ -144,16 +144,6 @@ AWS_S3_VERIFY = True
 
 AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com'
 
-STORAGES = {
-    "default": {
-        "BACKEND": "storages.backends.s3.S3Storage",
-        "OPTIONS": {
-        
-        },
-    },
-}
-
-
 DEFAULT_FILE_STORAGE = "storages.backends.s3.S3Storage"
 
 # Password validation
