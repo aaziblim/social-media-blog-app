@@ -224,24 +224,24 @@ SOCIALACCOUNT_PROVIDERS = {
             'client_id': os.environ.get('GOOGLE_CLIENT_ID'),
             'secret': os.environ.get('GOOGLE_CLIENT_SECRET'),
             'key': '',
-            'SCOPE': [
-                'profile',
-                'email',
-            ],
-
+        },
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
     },
     'github': {
         'APP': {
             'client_id': os.environ.get('GITHUB_CLIENT_ID'),
             'secret': os.environ.get('GITHUB_CLIENT_SECRET'),
             'key': '',
-            'SCOPE': [
-                'user',
-                'user:email',
-            ],
         },
+        'SCOPE': [
+            'user',
+            'user:email',
+        ],
     },
-}}
+}
 
 
 SOCIALACCOUNT_LOGIN_ON_GET = True
