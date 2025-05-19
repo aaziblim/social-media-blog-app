@@ -148,12 +148,6 @@ import cloudinary
 import cloudinary.uploader
 from cloudinary.utils import cloudinary_url
 
-cloudinary.config( 
-    cloud_name = "dacomxwpr", 
-    api_key = "418615281346971", 
-    api_secret = config('API_KEY', default=None), # Click 'View API Keys' above to copy your API secret
-    secure=True
-)
 
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': 'dacomxwpr',
