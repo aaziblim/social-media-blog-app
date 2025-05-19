@@ -236,7 +236,7 @@ SOCIALACCOUNT_PROVIDERS = {
             'secret': os.environ.get('GITHUB_CLIENT_SECRET'),
             'key': '',
             'SCOPE': [
-                'user'
+                'user',
                 'user:email',
             ],
         },
