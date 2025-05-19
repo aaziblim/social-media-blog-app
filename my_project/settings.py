@@ -26,14 +26,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY =  config('DJANGO_SECRET_KEY', default=None)
+SECRET_KEY =  os.environ.get('DJANGO_SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DJANGO_DEBUG', default=False)
+DEBUG = os.environ.get('DJANGO_DEBUG')
 
 # Add to settings.py
 if not DEBUG:
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-    AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME', default=None)
+    AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
     # Other AWS settings
 
 
@@ -132,9 +132,9 @@ if os.environ.get('ENVIRONMENT') == 'production':
     DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
 
 # AWS S3 Configuration
-AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default=None)
-AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default=None)
-AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME', default=None)
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
 AWS_S3_SIGNATURE_VERSION = 's3v4'
 AWS_S3_REGION_NAME = 'eu-north-1'  # Or use config('AWS_S3_REGION_NAME', default='eu-north-1')
 AWS_S3_FILE_OVERWRITE = False
@@ -221,20 +221,27 @@ load_dotenv()
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {
-            'client_id': config('GOOGLE_CLIENT_ID', default=None),
-            'secret': config('GOOGLE_CLIENT_SECRET', default=None),
-            'key': ''
-        },
+            'client_id': os.environ.get('GOOGLE_CLIENT_ID'),
+            'secret': os.environ.get('GOOGLE_CLIENT_SECRET'),
+            'key': '',
+            'SCOPE': [
+                'profile',
+                'email',
+            ],
 
     },
     'github': {
         'APP': {
-            'client_id': config('GITHUB_CLIENT_ID', default=None),
-            'secret': config('GITHUB_CLIENT_SECRET', default=None),
-            'key': ''
+            'client_id': os.environ.get('GITHUB_CLIENT_ID'),
+            'secret': os.environ.get('GITHUB_CLIENT_SECRET'),
+            'key': '',
+            'SCOPE': [
+                'user'
+                'user:email',
+            ],
         },
     },
-}
+}}
 
 
 SOCIALACCOUNT_LOGIN_ON_GET = True
