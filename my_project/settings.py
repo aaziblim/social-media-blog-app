@@ -129,18 +129,16 @@ DATABASES = {
 if os.environ.get('ENVIRONMENT') == 'production':
     DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
 
+# AWS S3 Configuration
 AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default=None)
 AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default=None)
 AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME', default=None)
 AWS_S3_SIGNATURE_VERSION = 's3v4'
-AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default=None)
-AWS_S3_SIGNATURE_NAME = 's3v4',
-AWS_S3_REGION_NAME = 'eu-north-1'
+AWS_S3_REGION_NAME = 'eu-north-1'  # Or use config('AWS_S3_REGION_NAME', default='eu-north-1')
 AWS_S3_FILE_OVERWRITE = False
-AWS_DEFAULT_ACL = 'public-read'
+AWS_DEFAULT_ACL = 'public-read'  # Choose either 'public-read' or None
 AWS_QUERYSTRING_AUTH = False
-AWS_DEFAULT_ACL = None
-AWS_S3_VERITY = True
+AWS_S3_VERIFY = True
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 # Password validation
@@ -243,7 +241,6 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "tailwind" # ✅ If using Tailwind CSS and Boots
 
 
 
-# Add this at the end of your settings.py file
 
 from django.db.utils import ProgrammingError, OperationalError
 import django
