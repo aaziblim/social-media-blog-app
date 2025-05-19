@@ -7,7 +7,7 @@ from django.core.files.base import ContentFile
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    image = models.ImageField(default='default.jpg', upload_to='profile_pics')
+    image = models.ImageField(default='https://res.cloudinary.com/dacomxwpr/image/upload/v1747636912/default_i7zros.jpg', upload_to='profile_pics')
     bio = models.TextField(blank=True, default='')
 
     def __str__(self):

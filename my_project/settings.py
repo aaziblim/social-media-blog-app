@@ -44,6 +44,8 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'my-project-latest.onrende
 
 INSTALLED_APPS = [
     'storages',
+     'cloudinary',
+    'cloudinary_storage',
     'crispy_forms',
     'crispy_bootstrap5',
     'crispy_tailwind',
@@ -139,7 +141,28 @@ AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = 'public-read'  # Choose either 'public-read' or None
 AWS_QUERYSTRING_AUTH = False
 AWS_S3_VERIFY = True
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com'
+
+import cloudinary
+import cloudinary.uploader
+from cloudinary.utils import cloudinary_url
+
+cloudinary.config( 
+    cloud_name = "dacomxwpr", 
+    api_key = "418615281346971", 
+    api_secret = config('API_KEY', default=None), # Click 'View API Keys' above to copy your API secret
+    secure=True
+)
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'dacomxwpr',
+    'API_KEY': '418615281346971',
+    'API_SECRET': config('API_KEY', default=None),
+}
+
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
