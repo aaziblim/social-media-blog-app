@@ -144,19 +144,17 @@ AWS_S3_VERIFY = True
 
 AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com'
 
-import cloudinary
-import cloudinary.uploader
-from cloudinary.utils import cloudinary_url
-
-
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': 'dacomxwpr',
-    'API_KEY': '418615281346971',
-    'API_SECRET': config('API_KEY', default=None),
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+        
+        },
+    },
 }
 
 
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+DEFAULT_FILE_STORAGE = "storages.backends.s3.S3Storage"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
