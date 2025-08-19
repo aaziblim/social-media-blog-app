@@ -1,0 +1,67 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+*.egg-info/
+*.egg
+MANIFEST
+dist/
+build/
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+coverage.xml
+*.cover
+.pytest_cache/
+
+# Virtual environments
+.prod.env
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Development and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Documentation
+docs/
+README.md
+LICENSE
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Local development settings
+# Be careful with this - DO NOT exclude settings files needed for your app
+# local_settings.py
+
+# Local database
+# db.sqlite3  # Uncomment if you're using a persistent database volume
+
+# Log files
+*.log
+
+# Media and static files
+# DON'T exclude these if they're needed for your registration functionality
+# media/
+# static/

@@ -1,0 +1,89 @@
+<!-- users/templates/users/logout.html -->
+{% extends "blog/base.html" %} {% load static %} {% block content %}
+<div
+  class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8"
+>
+  <div class="max-w-md w-full space-y-8">
+    <div>
+      <img
+        class="mx-auto h-12 w-auto"
+        src="{% static 'blog/logo.svg' %}"
+        alt="Logo"
+      />
+      <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        You've been logged out ):
+      </h2>
+    </div>
+
+    <div class="rounded-lg bg-indigo-50 border-l-4 border-indigo-500 p-4">
+      <div class="flex items-center">
+        <hero-icon
+          name="information-circle"
+          class="h-5 w-5 text-indigo-700 mr-2"
+        ></hero-icon>
+        <p class="text-sm text-indigo-700">
+          Thank you for using BazzChronicles. We hope to see you again soon!
+        </p>
+      </div>
+    </div>
+
+    <div class="text-center space-y-4">
+      <a
+        href="{% url 'login' %}"
+        class="w-full inline-flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+      >
+        <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+          <hero-icon
+            name="arrow-left-on-rectangle"
+            class="h-5 w-5 text-indigo-300"
+          ></hero-icon>
+        </span>
+        Sign In Again
+      </a>
+
+      <p class="mt-4 text-sm text-gray-600">
+        Or return to
+        <a
+          href="{% url 'blog-home' %}"
+          class="font-medium text-indigo-600 hover:text-indigo-500"
+        >
+          homepage
+        </a>
+      </p>
+    </div>
+
+    <!-- Social Login Section (optional) -->
+    <div class="mt-6">
+      <div class="relative">
+        <div class="absolute inset-0 flex items-center">
+          <div class="w-full border-t border-gray-300"></div>
+        </div>
+        <div class="relative flex justify-center text-sm">
+          <span class="px-2 bg-gray-50 text-gray-500">Quick access</span>
+        </div>
+      </div>
+
+      <div class="mt-6 grid grid-cols-2 gap-3">
+        <div>
+          <a
+            href="{% url 'login' %}"
+            class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+          >
+            <hero-icon name="lock-closed" class="w-5 h-5 mr-2"></hero-icon>
+            Sign In
+          </a>
+        </div>
+        <div>
+          <a
+            href="{% url 'register' %}"
+            class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+          >
+            <hero-icon name="user-add" class="w-5 h-5 mr-2"></hero-icon>
+            Register
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
