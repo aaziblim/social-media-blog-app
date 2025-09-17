@@ -12,7 +12,7 @@ class EnsureSiteMiddleware:
                 Site.objects.get_or_create(
                     id=1,
                     defaults={
-                        "domain": "my-project-latest.onrender.com",  # <- update to match your domain
+                        "domain": "my-project-latest.onrender.com", 
                         "name": "My Project"
                     }
                 )
