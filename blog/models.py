@@ -2,12 +2,17 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.urls import reverse
+from django.utils.text import slugify
+import uuid
 
 # Create your models here.
 class Post(models.Model):
     title = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=140, unique=True, blank=True)
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
     content = models.TextField()
     post_image = models.ImageField(upload_to='post_pics', blank=True, null=True)
+    post_video = models.FileField(upload_to='post_videos', blank=True, null=True)
     date_posted = models.DateTimeField(default=timezone.now)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     likes = models.ManyToManyField(User, related_name='liked_posts', blank=True)
@@ -16,11 +21,144 @@ class Post(models.Model):
     def get_absolute_url(self):
         return reverse('blog-home')
 
+    def save(self, *args, **kwargs):
+        # Keep slug immutable after first assignment; re-use the stored value on updates.
+        existing_slug = None
+        if self.pk:
+            existing_slug = Post.objects.filter(pk=self.pk).values_list('slug', flat=True).first()
 
-@property
-def total_likes(self):
+        if existing_slug:
+            self.slug = existing_slug
+        elif not self.slug:
+            base_slug = slugify(self.title)[:130] or slugify(str(self.public_id))
+            slug_candidate = base_slug
+            suffix = 1
+            while Post.objects.filter(slug=slug_candidate).exclude(pk=self.pk).exists():
+                slug_candidate = f"{base_slug}-{suffix}"
+                suffix += 1
+            self.slug = slug_candidate
+        super().save(*args, **kwargs)
+
+    @property
+    def total_likes(self):
         return self.likes.count()
 
-@property
-def total_dislikes(self):
-       return self.dislikes.count()  
+    @property
+    def total_dislikes(self):
+        return self.dislikes.count()
+
+
+class Comment(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
+    content = models.TextField(max_length=1000)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    likes = models.ManyToManyField(User, related_name='liked_comments', blank=True)
+    dislikes = models.ManyToManyField(User, related_name='disliked_comments', blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.author.username}: {self.content[:50]}'
+
+    @property
+    def score(self):
+        return self.likes.count() - self.dislikes.count()
+
+
+class Livestream(models.Model):
+    """
+    Livestream model for real-time broadcasting.
+    Simple, elegant - the way Steve would want it.
+    """
+    STATUS_CHOICES = [
+        ('scheduled', 'Scheduled'),
+        ('live', 'Live'),
+        ('ended', 'Ended'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    host = models.ForeignKey(User, on_delete=models.CASCADE, related_name='livestreams')
+    title = models.CharField(max_length=100)
+    description = models.TextField(blank=True, default='')
+    thumbnail = models.ImageField(upload_to='stream_thumbnails', blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
+    
+    # Stream metadata
+    viewer_count = models.PositiveIntegerField(default=0)
+    peak_viewers = models.PositiveIntegerField(default=0)
+    total_likes = models.PositiveIntegerField(default=0)
+    
+    # Timestamps
+    scheduled_at = models.DateTimeField(null=True, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Privacy
+    is_private = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f'{self.host.username} - {self.title}'
+    
+    def start(self):
+        """Go live - one tap, magic happens"""
+        self.status = 'live'
+        self.started_at = timezone.now()
+        self.save()
+    
+    def end(self):
+        """End the stream gracefully"""
+        self.status = 'ended'
+        self.ended_at = timezone.now()
+        self.save()
+    
+    @property
+    def duration(self):
+        """Stream duration in seconds"""
+        if not self.started_at:
+            return 0
+        end = self.ended_at or timezone.now()
+        return (end - self.started_at).total_seconds()
+    
+    @property
+    def is_live(self):
+        return self.status == 'live'
+
+
+class LivestreamMessage(models.Model):
+    """Chat messages during a livestream"""
+    stream = models.ForeignKey(Livestream, on_delete=models.CASCADE, related_name='messages')
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    content = models.CharField(max_length=500)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_pinned = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['created_at']
+    
+    def __str__(self):
+        return f'{self.author.username}: {self.content[:30]}'  
+
+
+class LivestreamSignal(models.Model):
+    """Lightweight signaling store for WebRTC offer/answer/candidates"""
+    ROLE_CHOICES = [('host', 'Host'), ('viewer', 'Viewer')]
+    KIND_CHOICES = [('offer', 'Offer'), ('answer', 'Answer'), ('candidate', 'Candidate')]
+    stream = models.ForeignKey(Livestream, on_delete=models.CASCADE, related_name='signals')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES)
+    payload = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'{self.stream_id} {self.role} {self.kind}'

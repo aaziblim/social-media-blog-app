@@ -4,6 +4,7 @@ from django.http import HttpResponse
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from .models import Post
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.db.models import Count
 from django import forms
 
 # Create your views here.
@@ -23,10 +24,35 @@ class PostListView(ListView):
     template_name = 'blog/home.html'
     context_object_name = 'posts'
     ordering = ['-date_posted']
+    paginate_by = 6
+
+    def get_queryset(self):
+        base_qs = super().get_queryset()
+        # Prefetch relationships and compute reaction counts to avoid N+1 queries.
+        return (
+            base_qs
+            .select_related('author', 'author__profile')
+            .prefetch_related('likes', 'dislikes')
+            .annotate(
+                likes_count=Count('likes', distinct=True),
+                dislikes_count=Count('dislikes', distinct=True),
+            )
+        )
     
 
 class PostDetailView(DetailView):
     model = Post
+
+    def get_queryset(self):
+        return (
+            super().get_queryset()
+            .select_related('author', 'author__profile')
+            .prefetch_related('likes', 'dislikes')
+            .annotate(
+                likes_count=Count('likes', distinct=True),
+                dislikes_count=Count('dislikes', distinct=True),
+            )
+        )
    
     
 

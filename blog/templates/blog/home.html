@@ -9,6 +9,7 @@
 
   <!-- Blog Posts -->
   <div class="space-y-8">
+    {% if posts %}
     {% for post in posts %}
     <article
       class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-8 animate-fade-in"
@@ -63,7 +64,7 @@
 
 <!-- Visible Post Content -->
 <p class="text-gray-600 leading-relaxed mb-6">
-  {{ post.content }}
+  {{ post.content|truncatewords:60 }}
   
   <!-- Like button -->
   <div class="flex space-x-4 mt-4">
@@ -75,7 +76,7 @@
                 <path fill="#33a867" d="M61.44,0A61.44,61.44,0,1,1,0,61.44,61.44,61.44,0,0,1,61.44,0Z"/>
                 <path fill="#fff" d="M32.5,53.39H43.06a2.18,2.18,0,0,1,2.17,2.18V84.52a2.19,2.19,0,0,1-2.17,2.18H32.5a2.19,2.19,0,0,1-2.18-2.18V55.57a2.19,2.19,0,0,1,2.18-2.18ZM60.2,31.68c1.14-5.82,10.66-.46,11.29,8.91a40.41,40.41,0,0,1-.81,9.93H84.29c5.65.23,10.59,4.28,7.1,10.93.8,2.9.92,6.3-1.24,7.65.27,4.57-1,7.41-3.37,9.65A11.42,11.42,0,0,1,85,84.63c-1.83,2.58-3.31,2-6.19,2h-23c-3.64,0-5.62-1-8-4V57C54.72,55.17,58.36,45.8,60.2,39.65v-8Z"/>
             </svg>
-            <span>{{ post.likes.count }}</span>
+            <span>{{ post.likes_count|default:post.likes.count }}</span>
             <span class="text-sm text-gray-600">likes</span>
         </button>
     </form>
@@ -92,7 +93,7 @@
           <path class="cls-1" d="M61.44,0A61.44,61.44,0,1,1,0,61.44,61.44,61.44,0,0,1,61.44,0Z"/>
           <path class="cls-2" d="M32.5,72.66H43.06a2.18,2.18,0,0,0,2.17-2.18V41.53a2.18,2.18,0,0,0-2.17-2.18H32.5a2.19,2.19,0,0,0-2.18,2.18v29a2.19,2.19,0,0,0,2.18,2.18ZM60.2,94.37c1.14,5.82,10.66.46,11.29-8.91a40.41,40.41,0,0,0-.81-9.93H84.29c5.65-.23,10.59-4.28,7.1-10.93.8-2.9.92-6.3-1.24-7.65.27-4.57-1-7.41-3.37-9.65A11.39,11.39,0,0,0,85,41.42c-1.83-2.58-3.31-2-6.19-2h-23c-3.64,0-5.62,1-8,4V69C54.72,70.88,58.36,80.25,60.2,86.4v8Z"/>
       </svg>
-      <span>{{ post.dislikes.count }}</span>
+      <span>{{ post.dislikes_count|default:post.dislikes.count }}</span>
       <span class="text-sm text-gray-600">dislikes</span>
   </button>
 </form>
@@ -101,6 +102,26 @@
 </p>
     </article>
     {% endfor %}
+    {% else %}
+    <div class="bg-white rounded-xl shadow-sm p-8 text-center text-gray-600">
+      No posts yet. Be the first to <a class="text-indigo-600 font-semibold" href="{% url 'post-create' %}">write one</a>.
+    </div>
+    {% endif %}
   </div>
+
+  <!-- Pagination -->
+  {% if is_paginated %}
+  <div class="flex items-center justify-center space-x-2 pt-4">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:border-indigo-400 hover:text-indigo-600">Previous</a>
+    {% endif %}
+
+    <span class="px-3 py-2 text-sm text-gray-600">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:border-indigo-400 hover:text-indigo-600">Next</a>
+    {% endif %}
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

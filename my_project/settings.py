@@ -46,9 +46,11 @@ INSTALLED_APPS = [
     'storages',
      'cloudinary',
     'cloudinary_storage',
+    'corsheaders',
     'crispy_forms',
     'crispy_bootstrap5',
     'crispy_tailwind',
+    'rest_framework',
     'users.apps.UsersConfig',
     'blog.apps.BlogConfig',
     'django.contrib.admin',
@@ -66,6 +68,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -254,6 +257,35 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 
 CRISPY_TEMPLATE_PACK = "tailwind"  # ✅ If using Tailwind CSS
 CRISPY_ALLOWED_TEMPLATE_PACKS = "tailwind" # ✅ If using Tailwind CSS and Bootstrap 5
+
+# API / CORS
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+]
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+]
+
+# Cookie settings for cross-origin requests
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False  # Allow JS to read CSRF token
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 6,
+}
 
 
 
