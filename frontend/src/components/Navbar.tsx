@@ -29,12 +29,9 @@ export default function Navbar() {
         <div className="h-14 flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" style={{ color: 'var(--accent)' }}>
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-              <circle cx="12" cy="12" r="4" fill="currentColor" />
-            </svg>
-            <span className="text-xl font-semibold tracking-tight hidden sm:block" style={{ color: 'var(--text-primary)' }}>
-              sphere
+            <img src="/spherespace-logo.svg" alt="Spherespace Logo" className="w-8 h-8" />
+            <span className="text-xl font-bold tracking-tight hidden sm:block" style={{ color: 'var(--text-primary)', fontFamily: 'Arial Rounded MT Bold, Arial, sans-serif' }}>
+              Spherespace
             </span>
           </Link>
 
