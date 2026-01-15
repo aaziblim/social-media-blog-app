@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="220" viewBox="0 0 700 220">
+  <style> .actor{font-family:Arial, Helvetica, sans-serif;font-size:12px;fill:#0f172a} .line{stroke:#94a3b8;stroke-width:1} .box{fill:#fff;stroke:#4f46e5;stroke-width:1}</style>
+  <text x="60" y="30" class="actor">Client</text>
+  <text x="250" y="30" class="actor">Daphne / ASGI</text>
+  <text x="460" y="30" class="actor">ChatConsumer</text>
+
+  <line x1="80" y1="45" x2="80" y2="180" class="line"/>
+  <line x1="280" y1="45" x2="280" y2="180" class="line"/>
+  <line x1="500" y1="45" x2="500" y2="180" class="line"/>
+
+  <!-- arrows -->
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="6" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 L3,5 z" fill="#4f46e5" />
+    </marker>
+  </defs>
+
+  <line x1="80" y1="70" x2="260" y2="70" stroke="#4f46e5" stroke-width="2" marker-end="url(#arr)" />
+  <text x="140" y="62" font-size="12" fill="#0f172a">WS Connect ?token=JWT</text>
+
+  <line x1="280" y1="100" x2="480" y2="100" stroke="#4f46e5" stroke-width="2" marker-end="url(#arr)" />
+  <text x="330" y="92" font-size="12" fill="#0f172a">ASGI -> consumer.connect()</text>
+
+  <line x1="80" y1="140" x2="260" y2="140" stroke="#4f46e5" stroke-width="2" marker-end="url(#arr)" />
+  <text x="140" y="132" font-size="12" fill="#0f172a">send({type:'chat_message', ...})</text>
+
+  <line x1="280" y1="170" x2="480" y2="170" stroke="#4f46e5" stroke-width="2" marker-end="url(#arr)" />
+  <text x="320" y="162" font-size="12" fill="#0f172a">consumer.save_message() & group_send()</text>
+</svg>

@@ -113,10 +113,15 @@ npm run dev
 - Fork the repo, make a feature branch, open PRs to `main`.
 - Keep changes small and add tests for backend logic where applicable.
 
-**Contact & Credits**
-- Built with ❤️ — contributor-friendly, creator-focused platform.
-- If you want branded assets, I can generate a logo suite and color tokens for Spherespace.
-
----
 
 This README is a living document — we can expand it with diagrams, API examples, and a contributor guide when you want to publish or onboard collaborators.
+
+## Docs
+
+Additional developer docs and diagrams are available in the `docs/` folder:
+
+- `docs/architecture.svg` — high-level architecture diagram (frontend → ASGI/Daphne → Channels → DB/Redis).
+- `docs/websocket-sequence.svg` — sequence diagram for a WebSocket message flow.
+- `docs/api.md` — REST + WebSocket examples (curl, fetch, WebSocket snippets).
+
+Open these files for diagrams and copyable API examples to help onboard contributors or flesh out API clients.
