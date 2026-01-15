@@ -137,6 +137,40 @@ export interface UserProfile {
   posts?: Post[]
 }
 
+// Search types
+export interface SearchUser {
+  id: number
+  username: string
+  first_name: string
+  last_name: string
+  profile_image: string | null
+  followers_count: number
+  bio?: string
+}
+
+export interface SearchPost {
+  id: number
+  public_id: string
+  slug: string
+  title: string
+  content: string
+  post_image_url: string | null
+  date_posted: string
+  author: SearchUser
+  likes_count: number
+  comments_count: number
+}
+
+export interface SearchResults {
+  users: SearchUser[]
+  posts: SearchPost[]
+}
+
+export async function searchAll(query: string): Promise<SearchResults> {
+  const { data } = await api.get<SearchResults>('/search/', { params: { q: query } })
+  return data
+}
+
 export async function fetchUserProfile(username: string): Promise<UserProfile> {
   const { data } = await api.get<UserProfile>(`/users/${username}/`)
   return data
@@ -193,6 +227,7 @@ export interface Livestream {
   is_private: boolean
   duration: number
   is_live: boolean
+  is_owner: boolean
 }
 
 export interface LivestreamMessage {
@@ -234,6 +269,17 @@ export async function goLive(id: string): Promise<Livestream> {
 export async function endStream(id: string): Promise<Livestream> {
   const { data } = await api.post<Livestream>(`/streams/${id}/end_stream/`)
   return data
+}
+
+export async function deleteStream(id: string): Promise<void> {
+  await api.delete(`/streams/${id}/delete_stream/`)
+}
+
+export async function fetchMyStreams(): Promise<Livestream[]> {
+  const { data } = await api.get('/streams/', { params: { mine: 'true' } })
+  if (Array.isArray(data)) return data as Livestream[]
+  if (Array.isArray((data as any)?.results)) return (data as any).results as Livestream[]
+  return []
 }
 
 export async function joinStream(id: string): Promise<Livestream> {
@@ -301,8 +347,8 @@ export async function fetchMessages(conversationId: string): Promise<Message[]> 
 }
 
 export async function sendMessage(
-  conversationId: string, 
-  content: string, 
+  conversationId: string,
+  content: string,
   messageType: 'text' | 'image' | 'post_share' | 'voice' = 'text',
   attachmentUrl?: string,
   sharedPostId?: string

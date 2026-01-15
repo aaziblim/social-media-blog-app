@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchLivestreams, createLivestream, goLive, type Livestream } from '../api'
+import { fetchLivestreams, fetchMyStreams, createLivestream, goLive, deleteStream, type Livestream } from '../api'
 import { useAuth } from '../AuthContext'
 
 function formatViewers(count: number): string {
@@ -20,35 +20,35 @@ function formatDuration(seconds: number): string {
 
 function LiveStreamCard({ stream }: { stream: Livestream }) {
   return (
-    <Link 
+    <Link
       to={`/live/${stream.id}`}
       className="group block rounded-2xl overflow-hidden transition-all duration-300 hover:translate-y-[-4px]"
       style={{ backgroundColor: 'var(--bg-primary)', boxShadow: 'var(--card-shadow)' }}
     >
       {/* Thumbnail / Preview */}
-      <div 
+      <div
         className="relative aspect-video overflow-hidden"
         style={{ backgroundColor: 'var(--bg-tertiary)' }}
       >
         {stream.thumbnail_url ? (
-          <img 
-            src={stream.thumbnail_url} 
-            alt="" 
+          <img
+            src={stream.thumbnail_url}
+            alt=""
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <div 
+            <div
               className="w-20 h-20 rounded-full flex items-center justify-center"
               style={{ backgroundColor: 'var(--accent)', opacity: 0.2 }}
             >
               <svg viewBox="0 0 24 24" fill="currentColor" className="w-10 h-10" style={{ color: 'var(--accent)' }}>
-                <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
               </svg>
             </div>
           </div>
         )}
-        
+
         {/* Live Badge */}
         {stream.is_live && (
           <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-red-500 text-white text-xs font-bold uppercase tracking-wide flex items-center gap-1.5">
@@ -59,40 +59,40 @@ function LiveStreamCard({ stream }: { stream: Livestream }) {
             LIVE
           </div>
         )}
-        
+
         {stream.status === 'scheduled' && (
-          <div 
+          <div
             className="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide"
             style={{ backgroundColor: 'var(--accent)', color: 'white' }}
           >
             Scheduled
           </div>
         )}
-        
+
         {stream.status === 'ended' && (
           <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-black/60 text-white text-xs font-medium">
             {formatDuration(stream.duration)}
           </div>
         )}
-        
+
         {/* Viewer count */}
         {stream.is_live && (
           <div className="absolute bottom-3 right-3 px-2 py-1 rounded-lg bg-black/60 text-white text-xs font-medium flex items-center gap-1">
             <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
-              <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+              <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
             </svg>
             {formatViewers(stream.viewer_count)}
           </div>
         )}
       </div>
-      
+
       {/* Info */}
       <div className="p-4">
         <div className="flex items-start gap-3">
           {/* Host avatar */}
-          <div 
+          <div
             className="w-10 h-10 rounded-full overflow-hidden shrink-0 ring-2"
-            style={{ 
+            style={{
               backgroundColor: 'var(--bg-tertiary)',
               '--tw-ring-color': stream.is_live ? '#ef4444' : 'var(--border-light)'
             } as React.CSSProperties}
@@ -100,7 +100,7 @@ function LiveStreamCard({ stream }: { stream: Livestream }) {
             {stream.host.profile_image ? (
               <img src={stream.host.profile_image} alt="" className="w-full h-full object-cover" />
             ) : (
-              <div 
+              <div
                 className="w-full h-full flex items-center justify-center text-white font-semibold text-sm"
                 style={{ backgroundColor: 'var(--accent)' }}
               >
@@ -108,9 +108,9 @@ function LiveStreamCard({ stream }: { stream: Livestream }) {
               </div>
             )}
           </div>
-          
+
           <div className="flex-1 min-w-0">
-            <h3 
+            <h3
               className="font-semibold text-[15px] truncate mb-0.5"
               style={{ color: 'var(--text-primary)' }}
             >
@@ -166,7 +166,7 @@ function GoLiveModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
         currentStream = stream
         if (videoRef.current) {
           videoRef.current.srcObject = stream
-          await videoRef.current.play().catch(() => {/* ignore autoplay block */})
+          await videoRef.current.play().catch(() => {/* ignore autoplay block */ })
         }
       } catch (err: any) {
         setCameraError(err?.message || 'Camera unavailable')
@@ -181,7 +181,7 @@ function GoLiveModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
       }
     }
   }, [isOpen, facingMode])
-  
+
   const createMutation = useMutation({
     mutationFn: () => createLivestream({ title, description }),
     onSuccess: (stream) => {
@@ -194,7 +194,7 @@ function GoLiveModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
       setFormError(msg)
     }
   })
-  
+
   const goLiveMutation = useMutation({
     mutationFn: () => goLive(createdStream!.id),
     onSuccess: (stream) => {
@@ -207,42 +207,34 @@ function GoLiveModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
       setFormError(msg)
     }
   })
-  
+
   if (!isOpen) return null
-  
+
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
       onClick={onClose}
     >
       {/* Backdrop with blur */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      
-      {/* Modal */}
-      <div 
-        className="relative w-full max-w-md rounded-3xl p-6 animate-zoomIn"
-        style={{ backgroundColor: 'var(--bg-primary)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
+
+      {/* Modal (responsive: fluid on mobile, fixed on desktop) */}
+      <div
+        className="relative w-[calc(100%-32px)] sm:w-[480px] max-w-[480px] rounded-3xl p-4 sm:p-6 animate-zoomInNoTranslate"
+        style={{ backgroundColor: 'var(--bg-primary)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto' }}
         onClick={e => e.stopPropagation()}
       >
         {step === 'setup' ? (
           <>
-            <div className="text-center mb-6">
-              <div 
-                className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-                style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-8 h-8 text-red-500">
-                  <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
-                </svg>
-              </div>
-              <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Go Live</h2>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Share this moment with your followers</p>
+            <div className="text-center mb-3">
+              <h2 className="text-base sm:text-lg font-bold" style={{ color: 'var(--text-primary)' }}>🔴 Go Live</h2>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>Share this moment with your followers</p>
             </div>
-            
-            <div className="space-y-4">
+
+            <div className="space-y-3">
               {/* Camera preview */}
-              <div className="rounded-2xl overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
-                <div className="relative bg-black aspect-video">
+              <div className="rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
+                <div className="relative bg-black" style={{ aspectRatio: '16/9', maxHeight: '32vh' }}>
                   {isCameraLoading && (
                     <div className="absolute inset-0 flex items-center justify-center text-sm" style={{ color: 'var(--text-secondary)' }}>
                       Warming up camera…
@@ -258,7 +250,7 @@ function GoLiveModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                     playsInline
                     muted
                     className="w-full h-full object-cover"
-                    style={{ opacity: cameraError ? 0.2 : 1 }}
+                    style={{ opacity: cameraError ? 0.2 : 1, maxHeight: '32vh' }}
                   />
                   <div className="absolute bottom-2 right-2 flex items-center gap-2">
                     <button
@@ -278,7 +270,7 @@ function GoLiveModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
                   Stream Title
                 </label>
                 <input
@@ -287,17 +279,17 @@ function GoLiveModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                   onChange={e => setTitle(e.target.value)}
                   placeholder="What's happening?"
                   maxLength={100}
-                  className="w-full px-4 py-3 rounded-xl text-[15px] outline-none transition-all focus:ring-2"
-                  style={{ 
-                    backgroundColor: 'var(--bg-tertiary)', 
+                  className="w-full px-3 py-2 sm:px-4 sm:py-3 rounded-xl text-[15px] outline-none transition-all focus:ring-2"
+                  style={{
+                    backgroundColor: 'var(--bg-tertiary)',
                     color: 'var(--text-primary)',
                     '--tw-ring-color': 'var(--accent)'
                   } as React.CSSProperties}
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
                   Description <span style={{ color: 'var(--text-tertiary)' }}>(optional)</span>
                 </label>
                 <textarea
@@ -305,17 +297,17 @@ function GoLiveModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                   onChange={e => setDescription(e.target.value)}
                   placeholder="Tell viewers what to expect..."
                   rows={3}
-                  className="w-full px-4 py-3 rounded-xl text-[15px] outline-none transition-all focus:ring-2 resize-none"
-                  style={{ 
-                    backgroundColor: 'var(--bg-tertiary)', 
+                  className="w-full px-3 py-2 sm:px-4 sm:py-3 rounded-xl text-[15px] outline-none transition-all focus:ring-2 resize-none"
+                  style={{
+                    backgroundColor: 'var(--bg-tertiary)',
                     color: 'var(--text-primary)',
                     '--tw-ring-color': 'var(--accent)'
                   } as React.CSSProperties}
                 />
               </div>
             </div>
-            
-            <div className="flex gap-3 mt-6">
+
+            <div className="flex gap-2 sm:gap-3 mt-4 sm:mt-6">
               <button
                 type="button"
                 onClick={onClose}
@@ -343,27 +335,27 @@ function GoLiveModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
         ) : (
           <>
             <div className="text-center">
-              <div 
-                className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center animate-pulse"
+              <div
+                className="w-18 h-18 rounded-full mx-auto mb-3 flex items-center justify-center animate-pulse"
                 style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)' }}
               >
-                <div 
-                  className="w-14 h-14 rounded-full flex items-center justify-center"
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center"
                   style={{ backgroundColor: '#ef4444' }}
                 >
                   <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7 text-white">
-                    <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                    <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
                   </svg>
                 </div>
               </div>
-              
-              <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Ready to go live?</h2>
-              <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
+
+              <h2 className="text-lg sm:text-xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Ready to go live?</h2>
+              <p className="text-sm mb-4 sm:mb-6" style={{ color: 'var(--text-secondary)' }}>
                 Your followers will be notified when you start
               </p>
-              
-              <div 
-                className="p-4 rounded-2xl mb-6 text-left"
+
+              <div
+                className="p-3 sm:p-4 rounded-2xl mb-4 sm:mb-6 text-left"
                 style={{ backgroundColor: 'var(--bg-tertiary)' }}
               >
                 <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h3>
@@ -371,19 +363,19 @@ function GoLiveModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                   <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{description}</p>
                 )}
               </div>
-              
+
               <button
                 type="button"
                 onClick={() => goLiveMutation.mutate()}
                 disabled={goLiveMutation.isPending}
-                className="w-full py-4 rounded-2xl font-semibold text-white text-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                className="w-full py-3 rounded-2xl font-semibold text-white text-base sm:text-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                 style={{ backgroundColor: '#ef4444' }}
               >
                 {goLiveMutation.isPending ? (
                   <span className="flex items-center justify-center gap-2">
                     <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
                     Going live...
                   </span>
@@ -397,11 +389,11 @@ function GoLiveModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                   </span>
                 )}
               </button>
-              
+
               <button
                 type="button"
                 onClick={() => { setStep('setup'); setCreatedStream(null) }}
-                className="mt-3 text-sm font-medium"
+                className="mt-2 text-sm font-medium"
                 style={{ color: 'var(--text-secondary)' }}
               >
                 ← Back to edit
@@ -416,18 +408,37 @@ function GoLiveModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
 
 export default function LivePage() {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [showGoLive, setShowGoLive] = useState(false)
   const [filter, setFilter] = useState<'all' | 'live'>('all')
-  
+  const [deleteTarget, setDeleteTarget] = useState<Livestream | null>(null)
+
   const { data: streams = [], isLoading } = useQuery({
     queryKey: ['streams', filter],
     queryFn: () => fetchLivestreams(filter === 'live' ? 'live' : undefined),
     refetchInterval: 10000 // Refresh every 10s
   })
-  
+
+  // Fetch user's own streams
+  const { data: myStreams = [] } = useQuery({
+    queryKey: ['myStreams'],
+    queryFn: fetchMyStreams,
+    enabled: !!user
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteStream(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['streams'] })
+      queryClient.invalidateQueries({ queryKey: ['myStreams'] })
+      setDeleteTarget(null)
+    }
+  })
+
   const liveStreams = streams.filter(s => s.is_live)
   const otherStreams = streams.filter(s => !s.is_live)
-  
+  const myEndedStreams = myStreams.filter(s => s.status === 'ended')
+
   return (
     <div className="w-full">
       {/* Header */}
@@ -438,7 +449,7 @@ export default function LivePage() {
             {liveStreams.length} streaming now
           </p>
         </div>
-        
+
         {user && (
           <button
             type="button"
@@ -454,9 +465,68 @@ export default function LivePage() {
           </button>
         )}
       </div>
-      
+
+      {/* My Streams Section - Only for logged in users with past streams */}
+      {user && myEndedStreams.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+            📹 My Streams
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {myEndedStreams.slice(0, 4).map(stream => (
+              <div
+                key={stream.id}
+                className="group relative rounded-2xl overflow-hidden transition-all duration-300 hover:translate-y-[-2px]"
+                style={{ backgroundColor: 'var(--bg-primary)', boxShadow: 'var(--card-shadow)' }}
+              >
+                <Link to={`/live/${stream.id}`}>
+                  <div
+                    className="relative aspect-video overflow-hidden"
+                    style={{ backgroundColor: 'var(--bg-tertiary)' }}
+                  >
+                    {stream.thumbnail_url ? (
+                      <img src={stream.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--accent)', opacity: 0.2 }}>
+                          <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8" style={{ color: 'var(--accent)' }}>
+                            <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
+                          </svg>
+                        </div>
+                      </div>
+                    )}
+                    <div className="absolute bottom-2 left-2 px-2 py-1 rounded-lg bg-black/60 text-white text-xs font-medium">
+                      {formatDuration(stream.duration)}
+                    </div>
+                    <div className="absolute bottom-2 right-2 flex gap-2">
+                      <span className="px-2 py-1 rounded-lg bg-black/60 text-white text-xs">👁 {formatViewers(stream.peak_viewers)}</span>
+                      <span className="px-2 py-1 rounded-lg bg-black/60 text-white text-xs">❤️ {formatViewers(stream.total_likes)}</span>
+                    </div>
+                  </div>
+                  <div className="p-3">
+                    <h3 className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>{stream.title}</h3>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                      {new Date(stream.ended_at || stream.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </Link>
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteTarget(stream) }}
+                  className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ backgroundColor: 'rgba(239, 68, 68, 0.9)' }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} className="w-4 h-4">
+                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Filter tabs */}
-      <div 
+      <div
         className="flex gap-1 p-1 rounded-xl mb-6 w-fit"
         style={{ backgroundColor: 'var(--bg-tertiary)' }}
       >
@@ -466,7 +536,7 @@ export default function LivePage() {
             type="button"
             onClick={() => setFilter(tab)}
             className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-            style={{ 
+            style={{
               backgroundColor: filter === tab ? 'var(--bg-primary)' : 'transparent',
               color: filter === tab ? 'var(--text-primary)' : 'var(--text-secondary)',
               boxShadow: filter === tab ? 'var(--card-shadow)' : 'none'
@@ -476,22 +546,22 @@ export default function LivePage() {
           </button>
         ))}
       </div>
-      
+
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
-          <div 
+          <div
             className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
             style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }}
           />
         </div>
       ) : streams.length === 0 ? (
         <div className="text-center py-20">
-          <div 
+          <div
             className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center"
             style={{ backgroundColor: 'var(--bg-tertiary)' }}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-10 h-10" style={{ color: 'var(--text-tertiary)' }}>
-              <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+              <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
             </svg>
           </div>
           <h3 className="text-lg font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>No streams yet</h3>
@@ -528,7 +598,7 @@ export default function LivePage() {
               </div>
             </section>
           )}
-          
+
           {/* Other streams */}
           {filter === 'all' && otherStreams.length > 0 && (
             <section>
@@ -544,8 +614,55 @@ export default function LivePage() {
           )}
         </div>
       )}
-      
+
       <GoLiveModal isOpen={showGoLive} onClose={() => setShowGoLive(false)} />
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={() => setDeleteTarget(null)}
+        >
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-sm rounded-3xl p-6 text-center animate-zoomIn"
+            style={{ backgroundColor: 'var(--bg-primary)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div
+              className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
+              style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth={1.5} className="w-8 h-8">
+                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+              Delete this stream?
+            </h3>
+            <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
+              "{deleteTarget.title}" will be permanently removed.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 py-3 rounded-xl font-medium transition-colors"
+                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteMutation.mutate(deleteTarget.id)}
+                disabled={deleteMutation.isPending}
+                className="flex-1 py-3 rounded-xl font-medium text-white transition-all disabled:opacity-50"
+                style={{ backgroundColor: '#ef4444' }}
+              >
+                {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

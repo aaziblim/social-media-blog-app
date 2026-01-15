@@ -151,3 +151,20 @@ body {
   animation: zoomIn 0.2s ease-out forwards;
 }
 
+/* Variant of zoomIn that does not apply a -50% translate.
+   Use this for modals that are centered with flexbox (not positioned via left/top 50%). */
+@keyframes zoomInNoTranslate {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-zoomInNoTranslate {
+  animation: zoomInNoTranslate 0.18s ease-out forwards;
+}
+
