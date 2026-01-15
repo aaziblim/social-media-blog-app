@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchPosts, likePost, dislikePost } from '../api'
 import { useAuth } from '../AuthContext'
+import VerifiedBadge from '../components/VerifiedBadge'
 import type { Paginated, Post } from '../types'
 
 function timeAgo(date: string) {
@@ -36,7 +37,7 @@ function useActiveViewers() {
   return count
 }
 
-type FilterTab = 'foryou' | 'fresh' | 'hot'
+type FilterTab = 'foryou' | 'fresh' | 'hot' | 'saved'
 
 // ============ SORTING ALGORITHMS ============
 
@@ -87,6 +88,38 @@ const VIBE_REACTIONS = [
   { emoji: '😂', label: 'Funny', color: '#FBBF24' },
 ] as const
 
+// Local storage helpers for saved posts
+function getSavedPosts(): Set<string> {
+  try {
+    const saved = localStorage.getItem('savedPosts')
+    return saved ? new Set(JSON.parse(saved)) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+function toggleSavedPost(postId: string): boolean {
+  const saved = getSavedPosts()
+  const isSaved = saved.has(postId)
+  if (isSaved) {
+    saved.delete(postId)
+  } else {
+    saved.add(postId)
+  }
+  localStorage.setItem('savedPosts', JSON.stringify([...saved]))
+  return !isSaved
+}
+
+// Check if current user is verified (demo - uses localStorage)
+function isCurrentUserVerified(): boolean {
+  try {
+    const status = localStorage.getItem('verificationStatus')
+    return status ? JSON.parse(status).isVerified : false
+  } catch {
+    return false
+  }
+}
+
 function PostCard({ 
   post, 
   onLike, 
@@ -94,7 +127,8 @@ function PostCard({
   liking, 
   disliking, 
   isAuthenticated,
-  isHot 
+  isHot,
+  currentUsername
 }: {
   post: Post
   onLike: () => void
@@ -103,10 +137,59 @@ function PostCard({
   disliking: boolean
   isAuthenticated: boolean
   isHot?: boolean
+  currentUsername?: string
 }) {
   const [showVibes, setShowVibes] = useState(false)
   const [selectedVibe, setSelectedVibe] = useState<number | null>(null)
+  const [isSaved, setIsSaved] = useState(() => getSavedPosts().has(post.public_id || String(post.id)))
+  const [shareToast, setShareToast] = useState<string | null>(null)
   const readTime = readingTime(post.content)
+  
+  // Check if author is verified - from API or localStorage if it's the current user's post
+  const isAuthorVerified = post.author.is_verified || (currentUsername === post.author.username && isCurrentUserVerified())
+
+  const postUrl = `${window.location.origin}/posts/${post.slug || post.public_id || post.id}`
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const shareData = {
+      title: post.title || 'Check out this post',
+      text: post.content.slice(0, 100) + (post.content.length > 100 ? '...' : ''),
+      url: postUrl,
+    }
+
+    try {
+      if (navigator.share && navigator.canShare?.(shareData)) {
+        await navigator.share(shareData)
+        setShareToast('Shared!')
+      } else {
+        await navigator.clipboard.writeText(postUrl)
+        setShareToast('Link copied!')
+      }
+    } catch (err) {
+      // User cancelled share or error occurred
+      if ((err as Error).name !== 'AbortError') {
+        try {
+          await navigator.clipboard.writeText(postUrl)
+          setShareToast('Link copied!')
+        } catch {
+          setShareToast('Could not share')
+        }
+      }
+    }
+    
+    setTimeout(() => setShareToast(null), 2000)
+  }
+
+  const handleSave = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const postId = post.public_id || String(post.id)
+    const nowSaved = toggleSavedPost(postId)
+    setIsSaved(nowSaved)
+  }
 
   const handleLike = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -178,6 +261,7 @@ function PostCard({
             >
               {post.author.username}
             </Link>
+            {isAuthorVerified && <VerifiedBadge size="sm" />}
             {isHot && (
               <span 
                 className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide flex items-center gap-1"
@@ -205,6 +289,18 @@ function PostCard({
               <>
                 <span className="opacity-50">•</span>
                 <span>{readTime}</span>
+              </>
+            )}
+            {post.views_count !== undefined && post.views_count > 0 && (
+              <>
+                <span className="opacity-50">•</span>
+                <span className="flex items-center gap-0.5">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3 h-3">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                  {post.views_count >= 1000 ? `${(post.views_count / 1000).toFixed(1)}K` : post.views_count}
+                </span>
               </>
             )}
           </div>
@@ -268,40 +364,40 @@ function PostCard({
       <div className="p-4 pt-3">
         {/* Quick Actions Row - Compact */}
         <div className="flex items-center gap-0.5 mb-3">
-          {/* Like */}
+          {/* Like - Heart icon with pink/red theme */}
           <button 
             type="button"
             onClick={handleLike}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer hover:scale-105 active:scale-95"
             style={{ 
-              backgroundColor: post.user_has_liked ? 'rgba(34, 197, 94, 0.12)' : 'transparent',
-              color: post.user_has_liked ? 'var(--success)' : 'var(--text-secondary)',
+              backgroundColor: post.user_has_liked ? 'rgba(239, 68, 108, 0.12)' : 'transparent',
+              color: post.user_has_liked ? '#EF446C' : 'var(--text-secondary)',
               opacity: !isAuthenticated || liking || disliking ? 0.5 : 1
             }}
             title={!isAuthenticated ? 'Sign in to like' : post.user_has_liked ? 'Unlike' : 'Like'}
           >
-            <svg viewBox="0 0 24 24" fill={post.user_has_liked ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.5} className="w-5 h-5">
-              <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+            <svg viewBox="0 0 24 24" fill={post.user_has_liked ? "currentColor" : "none"} stroke="currentColor" strokeWidth={post.user_has_liked ? 0 : 1.5} className={`w-5 h-5 ${post.user_has_liked ? 'animate-pulse' : ''}`}>
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
             </svg>
             {post.likes_count > 0 && <span>{post.likes_count}</span>}
           </button>
 
-          {/* Dislike */}
+          {/* Dislike - Thumbs down with subtle gray/blue theme */}
           <button 
             type="button"
             onClick={handleDislike}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer hover:scale-105 active:scale-95"
             style={{ 
-              backgroundColor: post.user_has_disliked ? 'rgba(239, 68, 68, 0.12)' : 'transparent',
-              color: post.user_has_disliked ? 'var(--danger)' : 'var(--text-secondary)',
+              backgroundColor: post.user_has_disliked ? 'rgba(100, 116, 139, 0.12)' : 'transparent',
+              color: post.user_has_disliked ? '#64748B' : 'var(--text-tertiary)',
               opacity: !isAuthenticated || liking || disliking ? 0.5 : 1
             }}
             title={!isAuthenticated ? 'Sign in to dislike' : post.user_has_disliked ? 'Remove dislike' : 'Dislike'}
           >
-            <svg viewBox="0 0 24 24" fill={post.user_has_disliked ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.5} className="w-5 h-5">
+            <svg viewBox="0 0 24 24" fill={post.user_has_disliked ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.5} className="w-4 h-4">
               <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17" />
             </svg>
-            {post.dislikes_count > 0 && <span>{post.dislikes_count}</span>}
+            {post.dislikes_count > 0 && <span className="text-xs">{post.dislikes_count}</span>}
           </button>
 
           {/* Comment */}
@@ -342,7 +438,7 @@ function PostCard({
             </button>
             {showVibes && (
               <div 
-                className="absolute bottom-full left-0 mb-2 flex gap-1 p-2 rounded-2xl shadow-xl z-10 animate-in fade-in slide-in-from-bottom-2 duration-200"
+                className="absolute bottom-full left-0 mb-2 flex gap-1 p-2 rounded-2xl shadow-xl z-10 animate-slideInFromBottom"
                 style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-light)' }}
               >
                 {VIBE_REACTIONS.map((vibe, i) => (
@@ -363,29 +459,52 @@ function PostCard({
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Bookmark */}
+          {/* Save - Ribbon/Flag icon with golden/amber theme */}
           <button 
             type="button"
-            className="p-2 rounded-xl transition-all hover:scale-105"
-            style={{ color: 'var(--text-secondary)' }}
+            onClick={handleSave}
+            className="flex items-center gap-1 px-2.5 py-2 rounded-xl transition-all hover:scale-105 active:scale-95"
+            style={{ 
+              color: isSaved ? '#F59E0B' : 'var(--text-secondary)',
+              backgroundColor: isSaved ? 'rgba(245, 158, 11, 0.12)' : 'transparent'
+            }}
+            title={isSaved ? 'Remove from saved' : 'Save post'}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5">
+            <svg viewBox="0 0 24 24" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth={isSaved ? 0 : 1.5} className={`w-5 h-5 ${isSaved ? 'drop-shadow-sm' : ''}`}>
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
             </svg>
+            {isSaved && <span className="text-xs font-medium">Saved</span>}
           </button>
 
           {/* Share */}
-          <button 
-            type="button"
-            className="p-2 rounded-xl transition-all hover:scale-105"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5">
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-              <polyline points="16 6 12 2 8 6" />
-              <line x1="12" y1="2" x2="12" y2="15" />
-            </svg>
-          </button>
+          <div className="relative">
+            <button 
+              type="button"
+              onClick={handleShare}
+              className="p-2 rounded-xl transition-all hover:scale-105 active:scale-95"
+              style={{ color: 'var(--text-secondary)' }}
+              title="Share post"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                <polyline points="16 6 12 2 8 6" />
+                <line x1="12" y1="2" x2="12" y2="15" />
+              </svg>
+            </button>
+            {/* Share Toast */}
+            {shareToast && (
+              <div 
+                className="absolute bottom-full right-0 mb-2 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap animate-slideInFromBottom"
+                style={{ 
+                  backgroundColor: 'var(--bg-tertiary)', 
+                  color: 'var(--text-primary)',
+                  boxShadow: 'var(--card-shadow)'
+                }}
+              >
+                {shareToast}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Title & Content - Below Media */}
@@ -421,7 +540,7 @@ export default function HomePage() {
   
   // Get tab from URL or default to 'foryou'
   const urlTab = searchParams.get('tab')
-  const activeTab: FilterTab = (urlTab === 'hot' || urlTab === 'fresh') ? urlTab : 'foryou'
+  const activeTab: FilterTab = (urlTab === 'hot' || urlTab === 'fresh' || urlTab === 'saved') ? urlTab : 'foryou'
   
   const setActiveTab = (tab: FilterTab) => {
     if (tab === 'foryou') {
@@ -505,6 +624,15 @@ export default function HomePage() {
   const sortedPosts = useMemo(() => {
     if (!posts.length) return []
     
+    // For saved tab, filter to only saved posts
+    if (activeTab === 'saved') {
+      const currentSaved = getSavedPosts()
+      return posts.filter(p => {
+        const postId = p.public_id || String(p.id)
+        return currentSaved.has(postId)
+      }).sort((a, b) => new Date(b.date_posted).getTime() - new Date(a.date_posted).getTime())
+    }
+    
     // Check if we need to re-sort (new tab or new posts loaded)
     const currentPostIds = posts.map(p => p.id).sort((a, b) => a - b).join(',')
     const cachedPostIds = sortOrderRef.current?.order?.slice().sort((a, b) => a - b).join(',')
@@ -545,7 +673,10 @@ export default function HomePage() {
     return sorted
   }, [posts, activeTab])
 
-  const tabs: { key: FilterTab; label: string; icon: React.ReactNode }[] = [
+  // Count saved posts for badge
+  const savedCount = useMemo(() => getSavedPosts().size, [activeTab])
+  
+  const tabs: { key: FilterTab; label: string; icon: React.ReactNode; badge?: number }[] = [
     { 
       key: 'foryou', 
       label: 'For You',
@@ -560,6 +691,12 @@ export default function HomePage() {
       key: 'hot', 
       label: 'Hot',
       icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-4 h-4"><path d="M12 2c.5 2.5 2 4.5 4 6 2.5 2 4 5 4 8a8 8 0 1 1-16 0c0-3 1.5-6 4-8 2-1.5 3.5-3.5 4-6z" /></svg>
+    },
+    { 
+      key: 'saved', 
+      label: 'Saved',
+      icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-4 h-4"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg>,
+      badge: savedCount > 0 ? savedCount : undefined
     },
   ]
 
@@ -630,15 +767,28 @@ export default function HomePage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-medium transition-all"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-sm font-medium transition-all relative"
               style={{ 
                 backgroundColor: activeTab === tab.key ? 'var(--bg-primary)' : 'transparent',
-                color: activeTab === tab.key ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                color: activeTab === tab.key 
+                  ? tab.key === 'saved' ? '#F59E0B' : 'var(--text-primary)' 
+                  : 'var(--text-tertiary)',
                 boxShadow: activeTab === tab.key ? 'var(--card-shadow)' : 'none'
               }}
             >
               {tab.icon}
-              {tab.label}
+              <span className="hidden sm:inline">{tab.label}</span>
+              {tab.badge !== undefined && (
+                <span 
+                  className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold"
+                  style={{ 
+                    backgroundColor: activeTab === tab.key ? 'rgba(245, 158, 11, 0.15)' : 'var(--bg-tertiary)',
+                    color: '#F59E0B'
+                  }}
+                >
+                  {tab.badge}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -693,34 +843,67 @@ export default function HomePage() {
           className="rounded-2xl p-10 text-center"
           style={{ backgroundColor: 'var(--bg-primary)', boxShadow: 'var(--card-shadow)' }}
         >
-          <div 
-            className="w-20 h-20 mx-auto mb-5 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: 'var(--bg-tertiary)' }}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-10 h-10" style={{ color: 'var(--text-tertiary)' }}>
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <circle cx="9" cy="9" r="2" />
-              <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-            The hangout is empty
-          </h3>
-          <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-            Be the first to start a conversation.
-          </p>
-          {user && (
-            <Link 
-              to="/posts/new"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white font-medium transition-all hover:opacity-90 active:scale-95"
-              style={{ backgroundColor: 'var(--accent)' }}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              Create the first post
-            </Link>
+          {activeTab === 'saved' ? (
+            // Empty state for Saved tab
+            <>
+              <div 
+                className="w-20 h-20 mx-auto mb-5 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)' }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-10 h-10" style={{ color: '#F59E0B' }}>
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                No saved posts yet
+              </h3>
+              <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
+                Tap the bookmark icon on any post to save it for later.
+              </p>
+              <button
+                onClick={() => setActiveTab('foryou')}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all hover:opacity-90 active:scale-95"
+                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                </svg>
+                Explore posts
+              </button>
+            </>
+          ) : (
+            // Default empty state
+            <>
+              <div 
+                className="w-20 h-20 mx-auto mb-5 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: 'var(--bg-tertiary)' }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-10 h-10" style={{ color: 'var(--text-tertiary)' }}>
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="9" cy="9" r="2" />
+                  <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                The hangout is empty
+              </h3>
+              <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
+                Be the first to start a conversation.
+              </p>
+              {user && (
+                <Link 
+                  to="/posts/new"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white font-medium transition-all hover:opacity-90 active:scale-95"
+                  style={{ backgroundColor: 'var(--accent)' }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  Create the first post
+                </Link>
+              )}
+            </>
           )}
         </div>
       ) : (
@@ -743,6 +926,7 @@ export default function HomePage() {
                   disliking={dislikeMutation.isPending && dislikeMutation.variables === postKey}
                   isAuthenticated={!!user}
                   isHot={isHotPost || isTrending}
+                  currentUsername={user?.username}
                 />
               )
             })}

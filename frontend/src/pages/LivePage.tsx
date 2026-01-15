@@ -220,7 +220,7 @@ function GoLiveModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
       
       {/* Modal */}
       <div 
-        className="relative w-full max-w-md rounded-3xl p-6 animate-in fade-in zoom-in-95 duration-200"
+        className="relative w-full max-w-md rounded-3xl p-6 animate-zoomIn"
         style={{ backgroundColor: 'var(--bg-primary)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
         onClick={e => e.stopPropagation()}
       >

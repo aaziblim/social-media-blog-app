@@ -280,3 +280,56 @@ export async function sendStreamSignal(id: string, signal: { role: 'host' | 'vie
   const { data } = await api.post<StreamSignal>(`/streams/${id}/signals/`, signal)
   return data
 }
+
+// ============ CHAT / MESSAGING API ============
+
+import type { Conversation, Message, ChatParticipant } from './types'
+
+export async function fetchConversations(): Promise<Conversation[]> {
+  const { data } = await api.get<Conversation[]>('/conversations/')
+  return data
+}
+
+export async function startConversation(username: string): Promise<Conversation> {
+  const { data } = await api.post<Conversation>('/conversations/', { username })
+  return data
+}
+
+export async function fetchMessages(conversationId: string): Promise<Message[]> {
+  const { data } = await api.get<Message[]>(`/conversations/${conversationId}/messages/`)
+  return data
+}
+
+export async function sendMessage(
+  conversationId: string, 
+  content: string, 
+  messageType: 'text' | 'image' | 'post_share' | 'voice' = 'text',
+  attachmentUrl?: string,
+  sharedPostId?: string
+): Promise<Message> {
+  const { data } = await api.post<Message>(`/conversations/${conversationId}/messages/`, {
+    content,
+    message_type: messageType,
+    attachment_url: attachmentUrl,
+    shared_post_id: sharedPostId
+  })
+  return data
+}
+
+export async function conversationAction(conversationId: string, action: 'accept' | 'decline' | 'delete'): Promise<void> {
+  await api.post(`/conversations/${conversationId}/action/`, { action })
+}
+
+export async function messageAction(messageId: string, action: 'unsend'): Promise<void> {
+  await api.post(`/messages/${messageId}/action/`, { action })
+}
+
+export async function fetchMessageRequests(): Promise<Conversation[]> {
+  const { data } = await api.get<Conversation[]>('/message-requests/')
+  return data
+}
+
+export async function fetchUnreadCount(): Promise<{ unread_count: number }> {
+  const { data } = await api.get<{ unread_count: number }>('/unread-count/')
+  return data
+}

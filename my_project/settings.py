@@ -43,6 +43,8 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'my-project-latest.onrende
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
     'storages',
      'cloudinary',
     'cloudinary_storage',
@@ -66,6 +68,25 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
     'allauth.socialaccount.providers.github',
 ]
+
+# Channels configuration
+ASGI_APPLICATION = 'my_project.asgi.application'
+
+# Channel layers - using in-memory for development
+# For production, use Redis:
+# CHANNEL_LAYERS = {
+#     'default': {
+#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
+#         'CONFIG': {
+#             'hosts': [('127.0.0.1', 6379)],
+#         },
+#     },
+# }
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',

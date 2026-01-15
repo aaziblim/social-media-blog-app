@@ -350,3 +350,274 @@ def following_list_view(request):
     users = [f.following for f in following]
     serializer = SuggestionUserSerializer(users, many=True, context={'request': request})
     return Response(serializer.data)
+
+
+# ============ CHAT / MESSAGING API ============
+
+from users.models import Conversation, DirectMessage
+from django.utils import timezone
+
+
+class ChatParticipantSerializer(serializers.ModelSerializer):
+    """Minimal user info for chat"""
+    profile_image = serializers.SerializerMethodField()
+    is_online = serializers.SerializerMethodField()
+    last_seen = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'first_name', 'last_name', 'profile_image', 'is_online', 'last_seen']
+    
+    def get_profile_image(self, obj):
+        profile = getattr(obj, 'profile', None)
+        image = getattr(profile, 'image', None)
+        if not image:
+            return None
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(image.url)
+        return image.url
+    
+    def get_is_online(self, obj):
+        profile = getattr(obj, 'profile', None)
+        if profile:
+            return profile.is_online
+        return False
+    
+    def get_last_seen(self, obj):
+        profile = getattr(obj, 'profile', None)
+        if profile and profile.last_seen:
+            return profile.last_seen.isoformat()
+        return None
+
+
+class DirectMessageSerializer(serializers.ModelSerializer):
+    """Serializer for chat messages"""
+    sender = ChatParticipantSerializer(read_only=True)
+    
+    class Meta:
+        model = DirectMessage
+        fields = [
+            'id', 'conversation', 'sender', 'content', 'created_at', 
+            'read_at', 'message_type', 'attachment_url', 'shared_post_id', 'is_unsent'
+        ]
+        read_only_fields = ['id', 'sender', 'created_at', 'read_at']
+
+
+class ConversationSerializer(serializers.ModelSerializer):
+    """Serializer for conversations"""
+    participants = ChatParticipantSerializer(many=True, read_only=True)
+    last_message = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Conversation
+        fields = [
+            'id', 'participants', 'last_message', 'unread_count', 
+            'updated_at', 'is_request', 'request_status'
+        ]
+    
+    def get_last_message(self, obj):
+        last_msg = obj.get_last_message()
+        if last_msg:
+            return DirectMessageSerializer(last_msg, context=self.context).data
+        return None
+    
+    def get_unread_count(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.get_unread_count(request.user)
+        return 0
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([permissions.IsAuthenticated])
+def conversations_view(request):
+    """
+    GET: List all conversations for the current user
+    POST: Start a new conversation with a user
+    """
+    if request.method == 'GET':
+        conversations = Conversation.objects.filter(
+            participants=request.user
+        ).prefetch_related('participants', 'participants__profile', 'messages')
+        
+        serializer = ConversationSerializer(conversations, many=True, context={'request': request})
+        return Response(serializer.data)
+    
+    elif request.method == 'POST':
+        # Start a new conversation
+        recipient_username = request.data.get('username')
+        if not recipient_username:
+            return Response({'error': 'Username is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            recipient = User.objects.get(username=recipient_username)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if recipient == request.user:
+            return Response({'error': 'Cannot message yourself'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if conversation already exists between these two users
+        existing = Conversation.objects.filter(participants=request.user).filter(participants=recipient)
+        if existing.exists():
+            convo = existing.first()
+            serializer = ConversationSerializer(convo, context={'request': request})
+            return Response(serializer.data)
+        
+        # Check if recipient follows the sender (for message request logic)
+        is_follower = Follow.objects.filter(follower=recipient, following=request.user).exists()
+        
+        # Create new conversation
+        convo = Conversation.objects.create(
+            is_request=not is_follower,
+            request_status='pending' if not is_follower else 'accepted'
+        )
+        convo.participants.add(request.user, recipient)
+        
+        serializer = ConversationSerializer(convo, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([permissions.IsAuthenticated])
+def conversation_messages_view(request, conversation_id):
+    """
+    GET: Get messages in a conversation
+    POST: Send a message to a conversation
+    """
+    try:
+        conversation = Conversation.objects.get(id=conversation_id, participants=request.user)
+    except Conversation.DoesNotExist:
+        return Response({'error': 'Conversation not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'GET':
+        messages = conversation.messages.select_related('sender', 'sender__profile').order_by('created_at')
+        
+        # Mark messages as read
+        unread = messages.filter(read_at__isnull=True).exclude(sender=request.user)
+        unread.update(read_at=timezone.now())
+        
+        serializer = DirectMessageSerializer(messages, many=True, context={'request': request})
+        return Response(serializer.data)
+    
+    elif request.method == 'POST':
+        content = request.data.get('content', '').strip()
+        message_type = request.data.get('message_type', 'text')
+        attachment_url = request.data.get('attachment_url')
+        shared_post_id = request.data.get('shared_post_id')
+        
+        if not content and message_type == 'text':
+            return Response({'error': 'Message cannot be empty'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if len(content) > 5000:
+            return Response({'error': 'Message too long'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create message
+        message = DirectMessage.objects.create(
+            conversation=conversation,
+            sender=request.user,
+            content=content,
+            message_type=message_type,
+            attachment_url=attachment_url,
+            shared_post_id=shared_post_id
+        )
+        
+        # Update conversation timestamp
+        conversation.updated_at = timezone.now()
+        conversation.save(update_fields=['updated_at'])
+        
+        # If this was a message request, auto-accept it when recipient replies
+        if conversation.is_request and conversation.request_status == 'pending':
+            other_user = conversation.get_other_participant(request.user)
+            # If the original recipient (not the requester) is replying, accept it
+            if other_user and conversation.messages.exclude(sender=request.user).exists():
+                conversation.request_status = 'accepted'
+                conversation.save(update_fields=['request_status'])
+        
+        serializer = DirectMessageSerializer(message, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def message_action_view(request, message_id):
+    """Perform actions on a message (unsend, react)"""
+    try:
+        message = DirectMessage.objects.get(id=message_id, sender=request.user)
+    except DirectMessage.DoesNotExist:
+        return Response({'error': 'Message not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    action = request.data.get('action')
+    
+    if action == 'unsend':
+        message.is_unsent = True
+        message.content = ''  # Clear content
+        message.save(update_fields=['is_unsent', 'content'])
+        return Response({'detail': 'Message unsent'})
+    
+    return Response({'error': 'Invalid action'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def conversation_action_view(request, conversation_id):
+    """Perform actions on a conversation (accept/decline request, delete)"""
+    try:
+        conversation = Conversation.objects.get(id=conversation_id, participants=request.user)
+    except Conversation.DoesNotExist:
+        return Response({'error': 'Conversation not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    action = request.data.get('action')
+    
+    if action == 'accept':
+        conversation.request_status = 'accepted'
+        conversation.save(update_fields=['request_status'])
+        return Response({'detail': 'Request accepted'})
+    
+    elif action == 'decline':
+        conversation.request_status = 'declined'
+        conversation.save(update_fields=['request_status'])
+        return Response({'detail': 'Request declined'})
+    
+    elif action == 'delete':
+        conversation.delete()
+        return Response({'detail': 'Conversation deleted'})
+    
+    return Response({'error': 'Invalid action'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def message_requests_view(request):
+    """Get pending message requests"""
+    requests = Conversation.objects.filter(
+        participants=request.user,
+        is_request=True,
+        request_status='pending'
+    ).prefetch_related('participants', 'participants__profile', 'messages')
+    
+    # Only return requests where the current user is NOT the initiator
+    # (i.e., they didn't send the first message)
+    result = []
+    for convo in requests:
+        first_message = convo.messages.order_by('created_at').first()
+        if first_message and first_message.sender != request.user:
+            result.append(convo)
+    
+    serializer = ConversationSerializer(result, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def unread_count_view(request):
+    """Get total unread message count for the current user"""
+    count = DirectMessage.objects.filter(
+        conversation__participants=request.user,
+        read_at__isnull=True
+    ).exclude(sender=request.user).count()
+    
+    return Response({'unread_count': count})
+

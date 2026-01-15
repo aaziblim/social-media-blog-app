@@ -3,6 +3,8 @@ import { Outlet, Link, useLocation } from 'react-router-dom'
 import Navbar from './Navbar'
 import { LeftSidebar, RightSidebar } from './Sidebars'
 import MobileMenuSheet from './MobileMenuSheet'
+import { ChatDrawer, useChatUnread } from './Chat'
+import { useAuth } from '../AuthContext'
 
 export default function Layout() {
   return (
@@ -30,12 +32,15 @@ export default function Layout() {
 function MobileNav() {
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
+  const { user } = useAuth()
+  const unreadCount = useChatUnread()
   
   const navItems = [
     { href: '/', icon: 'home', label: 'Home' },
     { href: '/explore', icon: 'search', label: 'Explore' },
     { href: '/posts/new', icon: 'plus', label: 'New', isCreate: true },
-    { href: '/live', icon: 'live', label: 'Live', isLive: true },
+    { icon: 'messages', label: 'Chat', isMessages: true, badge: unreadCount },
     { icon: 'menu', label: 'More', isMenu: true },
   ]
   
@@ -56,18 +61,22 @@ function MobileNav() {
               isCreate={item.isCreate}
               isLive={item.isLive}
               isMenu={item.isMenu}
+              isMessages={item.isMessages}
+              badge={item.badge}
               onMenuClick={() => setMenuOpen(true)}
+              onMessagesClick={() => user && setChatOpen(true)}
             />
           ))}
         </div>
       </nav>
       
       <MobileMenuSheet open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <ChatDrawer isOpen={chatOpen} onClose={() => setChatOpen(false)} />
     </>
   )
 }
 
-function NavIcon({ href, icon, label, isActive, isCreate, isLive, isMenu, onMenuClick }: { 
+function NavIcon({ href, icon, label, isActive, isCreate, isLive, isMenu, isMessages, badge, onMenuClick, onMessagesClick }: { 
   href?: string
   icon: string
   label: string
@@ -75,7 +84,10 @@ function NavIcon({ href, icon, label, isActive, isCreate, isLive, isMenu, onMenu
   isCreate?: boolean
   isLive?: boolean
   isMenu?: boolean
+  isMessages?: boolean
+  badge?: number
   onMenuClick?: () => void
+  onMessagesClick?: () => void
 }) {
   const icons: Record<string, React.ReactNode> = {
     home: (
@@ -88,6 +100,11 @@ function NavIcon({ href, icon, label, isActive, isCreate, isLive, isMenu, onMenu
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={isActive ? 2 : 1.5} className="w-6 h-6">
         <circle cx="11" cy="11" r="8" />
         <path d="m21 21-4.35-4.35" />
+      </svg>
+    ),
+    messages: (
+      <svg viewBox="0 0 24 24" fill={isActive ? "currentColor" : "none"} stroke="currentColor" strokeWidth={isActive ? 0 : 1.5} className="w-6 h-6">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
       </svg>
     ),
     live: (
@@ -125,6 +142,27 @@ function NavIcon({ href, icon, label, isActive, isCreate, isLive, isMenu, onMenu
       >
         {icons[icon]}
       </Link>
+    )
+  }
+
+  if (isMessages) {
+    return (
+      <button 
+        onClick={onMessagesClick}
+        className="flex flex-col items-center gap-0.5 py-1 px-3 relative"
+        style={{ color: 'var(--text-secondary)' }}
+      >
+        {icons[icon]}
+        <span className="text-[10px] font-medium">{label}</span>
+        {badge !== undefined && badge > 0 && (
+          <span 
+            className="absolute top-0 right-1.5 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center text-white"
+            style={{ backgroundColor: 'var(--danger)' }}
+          >
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
+      </button>
     )
   }
 

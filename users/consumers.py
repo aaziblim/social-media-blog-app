@@ -1,0 +1,272 @@
+"""
+WebSocket consumers for real-time chat functionality.
+"""
+
+import json
+from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from .models import Conversation, DirectMessage
+
+User = get_user_model()
+
+
+class ChatConsumer(AsyncWebsocketConsumer):
+    """
+    WebSocket consumer for handling real-time chat messages.
+    Each user joins a personal room based on their user ID to receive messages.
+    """
+
+    async def connect(self):
+        """Handle WebSocket connection."""
+        self.user = self.scope['user']
+        
+        if not self.user.is_authenticated:
+            await self.close()
+            return
+        
+        # Update user's last_seen to mark them as online
+        await self.update_user_last_seen()
+        
+        # Each user joins their own personal room
+        self.room_name = f"user_{self.user.id}"
+        self.room_group_name = f"chat_{self.room_name}"
+
+        # Join the user's personal room group
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+
+        await self.accept()
+        
+        # Send connection success message
+        await self.send(text_data=json.dumps({
+            'type': 'connection_established',
+            'message': 'Connected to chat server'
+        }))
+    
+    @database_sync_to_async
+    def update_user_last_seen(self):
+        """Update user's last_seen timestamp."""
+        if hasattr(self.user, 'profile'):
+            self.user.profile.last_seen = timezone.now()
+            self.user.profile.save(update_fields=['last_seen'])
+
+    async def disconnect(self, close_code):
+        """Handle WebSocket disconnection."""
+        if hasattr(self, 'room_group_name'):
+            await self.channel_layer.group_discard(
+                self.room_group_name,
+                self.channel_name
+            )
+
+    async def receive(self, text_data):
+        """Handle incoming WebSocket messages."""
+        try:
+            # Update last_seen on any activity
+            await self.update_user_last_seen()
+            
+            data = json.loads(text_data)
+            message_type = data.get('type')
+
+            if message_type == 'chat_message':
+                await self.handle_chat_message(data)
+            elif message_type == 'typing':
+                await self.handle_typing(data)
+            elif message_type == 'mark_read':
+                await self.handle_mark_read(data)
+            elif message_type == 'ping':
+                await self.send(text_data=json.dumps({'type': 'pong'}))
+        except json.JSONDecodeError:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Invalid JSON'
+            }))
+
+    async def handle_chat_message(self, data):
+        """Handle sending a chat message."""
+        conversation_id = data.get('conversation_id')
+        content = data.get('content', '').strip()
+        message_type = data.get('message_type', 'text')
+
+        if not conversation_id or not content:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Missing conversation_id or content'
+            }))
+            return
+
+        # Save message to database and get recipient
+        message_data = await self.save_message(
+            conversation_id, content, message_type
+        )
+
+        if message_data.get('error'):
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': message_data['error']
+            }))
+            return
+
+        # Send message to recipient's room
+        recipient_room = f"chat_user_{message_data['recipient_id']}"
+        await self.channel_layer.group_send(
+            recipient_room,
+            {
+                'type': 'chat_message',
+                'message': message_data['message']
+            }
+        )
+
+        # Also send confirmation back to sender
+        await self.send(text_data=json.dumps({
+            'type': 'message_sent',
+            'message': message_data['message']
+        }))
+
+    async def handle_typing(self, data):
+        """Handle typing indicator."""
+        conversation_id = data.get('conversation_id')
+        is_typing = data.get('is_typing', False)
+
+        recipient_id = await self.get_conversation_recipient(conversation_id)
+        if recipient_id:
+            recipient_room = f"chat_user_{recipient_id}"
+            await self.channel_layer.group_send(
+                recipient_room,
+                {
+                    'type': 'typing_indicator',
+                    'conversation_id': conversation_id,
+                    'user_id': self.user.id,
+                    'username': self.user.username,
+                    'is_typing': is_typing
+                }
+            )
+
+    async def handle_mark_read(self, data):
+        """Handle marking messages as read."""
+        conversation_id = data.get('conversation_id')
+        
+        if conversation_id:
+            read_count = await self.mark_messages_read(conversation_id)
+            
+            # Notify the other user that messages were read
+            recipient_id = await self.get_conversation_recipient(conversation_id)
+            if recipient_id:
+                recipient_room = f"chat_user_{recipient_id}"
+                await self.channel_layer.group_send(
+                    recipient_room,
+                    {
+                        'type': 'messages_read',
+                        'conversation_id': conversation_id,
+                        'reader_id': self.user.id,
+                        'count': read_count
+                    }
+                )
+
+    # Channel layer message handlers
+    async def chat_message(self, event):
+        """Send chat message to WebSocket."""
+        await self.send(text_data=json.dumps({
+            'type': 'new_message',
+            'message': event['message']
+        }))
+
+    async def typing_indicator(self, event):
+        """Send typing indicator to WebSocket."""
+        await self.send(text_data=json.dumps({
+            'type': 'typing',
+            'conversation_id': event['conversation_id'],
+            'user_id': event['user_id'],
+            'username': event['username'],
+            'is_typing': event['is_typing']
+        }))
+
+    async def messages_read(self, event):
+        """Send messages read notification to WebSocket."""
+        await self.send(text_data=json.dumps({
+            'type': 'messages_read',
+            'conversation_id': event['conversation_id'],
+            'reader_id': event['reader_id'],
+            'count': event['count']
+        }))
+
+    # Database operations
+    @database_sync_to_async
+    def save_message(self, conversation_id, content, message_type):
+        """Save a message to the database."""
+        try:
+            conversation = Conversation.objects.get(id=conversation_id)
+            
+            # Check if user is participant
+            if self.user not in conversation.participants.all():
+                return {'error': 'Not a participant in this conversation'}
+            
+            # Check if conversation is accepted (not a pending request)
+            if conversation.is_request and conversation.request_status == 'pending':
+                # Only the original sender can send messages to pending requests
+                first_msg = conversation.messages.order_by('created_at').first()
+                if first_msg and first_msg.sender != self.user:
+                    return {'error': 'Cannot send messages to pending requests'}
+            
+            # Get recipient
+            recipient = conversation.participants.exclude(id=self.user.id).first()
+            
+            # Create the message
+            message = DirectMessage.objects.create(
+                conversation=conversation,
+                sender=self.user,
+                content=content,
+                message_type=message_type
+            )
+            
+            # Update conversation timestamp
+            conversation.updated_at = timezone.now()
+            conversation.save()
+            
+            return {
+                'message': {
+                    'id': str(message.id),
+                    'conversation_id': str(conversation.id),
+                    'sender': {
+                        'id': self.user.id,
+                        'username': self.user.username,
+                        'profile_image': self.user.profile.image.url if hasattr(self.user, 'profile') and self.user.profile.image else None
+                    },
+                    'content': message.content,
+                    'message_type': message.message_type,
+                    'created_at': message.created_at.isoformat(),
+                    'is_unsent': message.is_unsent
+                },
+                'recipient_id': recipient.id if recipient else None
+            }
+        except Conversation.DoesNotExist:
+            return {'error': 'Conversation not found'}
+
+    @database_sync_to_async
+    def get_conversation_recipient(self, conversation_id):
+        """Get the other participant in a conversation."""
+        try:
+            conversation = Conversation.objects.get(id=conversation_id)
+            recipient = conversation.participants.exclude(id=self.user.id).first()
+            return recipient.id if recipient else None
+        except Conversation.DoesNotExist:
+            return None
+
+    @database_sync_to_async
+    def mark_messages_read(self, conversation_id):
+        """Mark all unread messages in a conversation as read."""
+        try:
+            conversation = Conversation.objects.get(id=conversation_id)
+            messages = DirectMessage.objects.filter(
+                conversation=conversation,
+                read_at__isnull=True
+            ).exclude(sender=self.user)
+            
+            count = messages.count()
+            messages.update(read_at=timezone.now())
+            return count
+        except Conversation.DoesNotExist:
+            return 0

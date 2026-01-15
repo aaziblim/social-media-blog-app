@@ -10,6 +10,8 @@ import UserProfilePage from './pages/UserProfilePage'
 import ExplorePage from './pages/ExplorePage'
 import LivePage from './pages/LivePage'
 import StreamViewerPage from './pages/StreamViewerPage'
+import GetVerifiedPage from './pages/GetVerifiedPage'
+import CreatorDashboardPage from './pages/CreatorDashboardPage'
 
 function App() {
   return (
@@ -26,6 +28,8 @@ function App() {
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/live" element={<LivePage />} />
         <Route path="/live/:id" element={<StreamViewerPage />} />
+        <Route path="/get-verified" element={<GetVerifiedPage />} />
+        <Route path="/dashboard" element={<CreatorDashboardPage />} />
       </Route>
     </Routes>
   )

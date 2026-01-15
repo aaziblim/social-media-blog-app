@@ -4,6 +4,7 @@ export interface Author {
   first_name?: string
   last_name?: string
   profile_image?: string | null
+  is_verified?: boolean
 }
 
 export interface Post {
@@ -21,6 +22,7 @@ export interface Post {
   comments_count: number
   user_has_liked: boolean
   user_has_disliked: boolean
+  views_count?: number
 }
 
 export interface Paginated<T> {
@@ -36,6 +38,7 @@ export interface User {
   email: string
   first_name?: string
   last_name?: string
+  is_verified?: boolean
   profile?: {
     image?: string | null
     bio?: string
@@ -78,9 +81,86 @@ export interface UserProfile {
   last_name?: string
   profile_image?: string | null
   bio?: string
+  is_verified?: boolean
   posts_count: number
   followers_count: number
   following_count: number
   is_following?: boolean
   posts?: Post[]
+}
+
+// ============ ANALYTICS ============
+
+export interface CreatorAnalytics {
+  overview: {
+    total_views: number
+    total_likes: number
+    total_comments: number
+    total_followers: number
+    views_change: number // percentage change from last period
+    likes_change: number
+    followers_change: number
+  }
+  chart_data: {
+    date: string
+    views: number
+    likes: number
+    followers: number
+  }[]
+  top_posts: {
+    id: string
+    title: string
+    views: number
+    likes: number
+    engagement_rate: number
+  }[]
+  audience: {
+    countries: { name: string; percentage: number }[]
+    age_groups: { range: string; percentage: number }[]
+  }
+}
+
+// ============ CHAT / MESSAGING ============
+
+export interface ChatParticipant {
+  id: number
+  username: string
+  first_name?: string
+  last_name?: string
+  profile_image?: string | null
+  is_online?: boolean
+  last_seen?: string
+}
+
+export interface Message {
+  id: string
+  conversation_id: string
+  sender: ChatParticipant
+  content: string
+  created_at: string
+  read_at?: string | null
+  message_type: 'text' | 'image' | 'post_share' | 'voice'
+  attachment_url?: string | null
+  shared_post_id?: string | null
+  reactions?: { emoji: string; user_id: number }[]
+  is_unsent?: boolean
+}
+
+export interface Conversation {
+  id: string
+  participants: ChatParticipant[]
+  last_message?: Message | null
+  unread_count: number
+  updated_at: string
+  is_muted?: boolean
+  is_request?: boolean // true if this is a message request (non-follower)
+  request_status?: 'pending' | 'accepted' | 'declined'
+}
+
+export interface MessageRequest {
+  id: string
+  from_user: ChatParticipant
+  preview_message: string
+  created_at: string
+  status: 'pending' | 'accepted' | 'declined'
 }

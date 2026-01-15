@@ -54,6 +54,13 @@ urlpatterns = [
     path('api/suggestions/', users_api.suggested_users_view, name='api-suggestions'),
     path('api/explore/', users_api.explore_users_view, name='api-explore'),
     path('api/stats/', users_api.user_stats_view, name='api-user-stats'),
+    # Chat / Messaging API
+    path('api/conversations/', users_api.conversations_view, name='api-conversations'),
+    path('api/conversations/<uuid:conversation_id>/messages/', users_api.conversation_messages_view, name='api-conversation-messages'),
+    path('api/conversations/<uuid:conversation_id>/action/', users_api.conversation_action_view, name='api-conversation-action'),
+    path('api/messages/<uuid:message_id>/action/', users_api.message_action_view, name='api-message-action'),
+    path('api/message-requests/', users_api.message_requests_view, name='api-message-requests'),
+    path('api/unread-count/', users_api.unread_count_view, name='api-unread-count'),
     path('api/', include(router.urls)),
     path('', include('blog.urls')),  # This will route "/" and "/about/" as defined in blog.urls.
     path('accounts/', include('allauth.urls'))
