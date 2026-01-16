@@ -302,6 +302,3 @@ See the `docs/` folder for:
 - `websocket-sequence.svg` — WebSocket message flow
 - `api.md` — REST & WebSocket API examples
 
----
-
-**Built with ❤️ using Django, React, and TypeScript**
