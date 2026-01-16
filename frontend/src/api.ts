@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { Paginated, Post, User, PostFormData, Comment, CommentFormData } from './types'
+import type { Paginated, Post, User, PostFormData, Comment, CommentFormData, Community } from './types'
 
 // Use relative URL so requests go through Vite proxy in dev
 const apiBase = import.meta.env.VITE_API_BASE ?? '/api'
@@ -46,6 +46,10 @@ export async function createPost(postData: PostFormData): Promise<Post> {
   const formData = new FormData()
   formData.append('title', postData.title)
   formData.append('content', postData.content)
+
+  if (postData.community_slug) {
+    formData.append('community_slug', postData.community_slug)
+  }
   if (postData.post_image) {
     formData.append('post_image', postData.post_image)
   }
@@ -379,3 +383,119 @@ export async function fetchUnreadCount(): Promise<{ unread_count: number }> {
   const { data } = await api.get<{ unread_count: number }>('/unread-count/')
   return data
 }
+
+// ============ ACTIVITY / STREAK API ============
+
+export interface UserStreakData {
+  days: boolean[]
+  current_streak: number
+  week_start: string
+}
+
+export async function fetchUserStreak(): Promise<UserStreakData> {
+  const { data } = await api.get<UserStreakData>('/activity/streak/')
+  return data
+}
+
+export interface CommunityPulseData {
+  pulse: number
+  posts_count: number
+  comments_count: number
+  active_users: number
+}
+
+export async function fetchCommunityPulse(): Promise<CommunityPulseData> {
+  const { data } = await api.get<CommunityPulseData>('/activity/pulse/')
+  return data
+}
+
+// ============ E2EE PUBLIC KEY API ============
+
+export interface PublicKeyData {
+  username: string
+  public_key: string
+  updated_at?: string
+}
+
+/**
+ * Fetch a user's public key for E2EE
+ */
+export async function fetchPublicKey(username: string): Promise<PublicKeyData> {
+  const { data } = await api.get<PublicKeyData>(`/keys/${username}/`)
+  return data
+}
+
+/**
+ * Upload/update current user's public key
+ */
+export async function uploadPublicKey(publicKey: string): Promise<void> {
+  await api.post('/keys/', { public_key: publicKey })
+}
+
+/**
+ * Check if current user has a public key on server
+ */
+export async function fetchMyPublicKey(): Promise<PublicKeyData | null> {
+  try {
+    const { data } = await api.get<PublicKeyData>('/keys/me/')
+    return data
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Send an encrypted message
+ */
+export async function sendEncryptedMessage(
+  conversationId: string,
+  encryptedContent: string,
+  messageType: 'text' | 'image' | 'post_share' | 'voice' = 'text'
+): Promise<Message> {
+  const { data } = await api.post<Message>(`/conversations/${conversationId}/messages/`, {
+    content: encryptedContent,
+    message_type: messageType,
+    is_encrypted: true
+  })
+  return data
+}
+
+// ============ COMMUNITIES ============
+
+export async function fetchCommunities(): Promise<Paginated<Community>> {
+  const { data } = await api.get<Paginated<Community>>('/communities/')
+  return data
+}
+
+export async function fetchMyCommunities(): Promise<Community[]> {
+  // We can filter by members=me or similar if the API supports it, 
+  // but for now let's just use the results from fetchCommunities and filter or add an endpoint.
+  // Actually, I'll add a 'joined' filter to the backend if needed, but for now I'll just fetch all and filter.
+  const { data } = await api.get<Paginated<Community>>('/communities/')
+  return data.results.filter(c => c.is_member)
+}
+
+export async function fetchCommunity(slug: string): Promise<Community> {
+  const { data } = await api.get<Community>(`/communities/${slug}/`)
+  return data
+}
+
+export async function createCommunity(formData: FormData): Promise<Community> {
+  const { data } = await api.post<Community>('/communities/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+  return data
+}
+
+export async function joinCommunity(slug: string): Promise<{ status: string; role: string }> {
+  const { data } = await api.post(`/communities/${slug}/join/`)
+  return data
+}
+
+export async function leaveCommunity(slug: string): Promise<{ status: string }> {
+  const { data } = await api.post(`/communities/${slug}/leave/`)
+  return data
+}
+
+// Default export for axios instance (for direct API calls)
+export default api

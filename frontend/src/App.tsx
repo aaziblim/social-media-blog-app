@@ -11,7 +11,11 @@ import ExplorePage from './pages/ExplorePage'
 import LivePage from './pages/LivePage'
 import StreamViewerPage from './pages/StreamViewerPage'
 import GetVerifiedPage from './pages/GetVerifiedPage'
+import CheckoutPage from './pages/CheckoutPage'
 import CreatorDashboardPage from './pages/CreatorDashboardPage'
+import CommunityPage from './pages/CommunityPage'
+import ExploreCommunitiesPage from './pages/ExploreCommunitiesPage'
+import CreateCommunityPage from './pages/CreateCommunityPage'
 
 function App() {
   return (
@@ -29,7 +33,11 @@ function App() {
         <Route path="/live" element={<LivePage />} />
         <Route path="/live/:id" element={<StreamViewerPage />} />
         <Route path="/get-verified" element={<GetVerifiedPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/dashboard" element={<CreatorDashboardPage />} />
+        <Route path="/c/:slug" element={<CommunityPage />} />
+        <Route path="/communities/discover" element={<ExploreCommunitiesPage />} />
+        <Route path="/communities/new" element={<CreateCommunityPage />} />
       </Route>
     </Routes>
   )

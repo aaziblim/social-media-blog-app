@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchPost, createPost, updatePost } from '../api'
 import { useAuth } from '../AuthContext'
@@ -65,10 +65,22 @@ export default function PostFormPage() {
     }
   }, [video])
 
+  const [searchParams] = useSearchParams()
+  const communitySlug = searchParams.get('community')
+
   const createMutation = useMutation({
-    mutationFn: () => createPost({ title, content, post_image: image, post_video: video }),
+    mutationFn: () => createPost({
+      title,
+      content,
+      post_image: image,
+      post_video: video,
+      community_slug: communitySlug
+    }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['posts'] })
+      if (communitySlug) {
+        queryClient.invalidateQueries({ queryKey: ['communityPosts', communitySlug] })
+      }
       navigate(`/posts/${data.slug || data.public_id}`)
     },
     onError: () => setError('Failed to create post. Please try again.'),
@@ -165,7 +177,7 @@ export default function PostFormPage() {
       {/* Form Card */}
       <div className="rounded-2xl p-6" style={{ backgroundColor: 'var(--bg-primary)', boxShadow: 'var(--card-shadow)' }}>
         {error && (
-          <div 
+          <div
             className="mb-5 p-3 rounded-xl text-sm flex items-center gap-2"
             style={{ backgroundColor: 'rgba(255, 59, 48, 0.1)', color: 'var(--danger)' }}
           >
@@ -181,8 +193,8 @@ export default function PostFormPage() {
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Title */}
           <div>
-            <label 
-              htmlFor="title" 
+            <label
+              htmlFor="title"
               className="block text-sm font-medium mb-1.5"
               style={{ color: 'var(--text-secondary)' }}
             >
@@ -196,8 +208,8 @@ export default function PostFormPage() {
               placeholder="Give your post a title"
               disabled={isPending}
               className="w-full px-4 py-3 rounded-xl text-base focus:outline-none focus:ring-2 transition-all"
-              style={{ 
-                backgroundColor: 'var(--bg-secondary)', 
+              style={{
+                backgroundColor: 'var(--bg-secondary)',
                 color: 'var(--text-primary)',
                 border: '1px solid var(--border-light)'
               }}
@@ -206,8 +218,8 @@ export default function PostFormPage() {
 
           {/* Content */}
           <div>
-            <label 
-              htmlFor="content" 
+            <label
+              htmlFor="content"
               className="block text-sm font-medium mb-1.5"
               style={{ color: 'var(--text-secondary)' }}
             >
@@ -221,8 +233,8 @@ export default function PostFormPage() {
               rows={5}
               disabled={isPending}
               className="w-full px-4 py-3 rounded-xl text-base focus:outline-none focus:ring-2 transition-all resize-y min-h-28"
-              style={{ 
-                backgroundColor: 'var(--bg-secondary)', 
+              style={{
+                backgroundColor: 'var(--bg-secondary)',
                 color: 'var(--text-primary)',
                 border: '1px solid var(--border-light)'
               }}
@@ -234,13 +246,13 @@ export default function PostFormPage() {
             <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
               Media (optional)
             </label>
-            
+
             {(imagePreview || videoPreview) ? (
               <div className="relative rounded-xl overflow-hidden mb-3">
                 {mediaType === 'video' && videoPreview ? (
-                  <video 
-                    src={videoPreview} 
-                    controls 
+                  <video
+                    src={videoPreview}
+                    controls
                     className="w-full max-h-64 object-contain bg-black rounded-xl"
                   />
                 ) : imagePreview ? (
@@ -266,7 +278,7 @@ export default function PostFormPage() {
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 {/* Image Upload */}
-                <label 
+                <label
                   className="flex flex-col items-center justify-center h-28 border-2 border-dashed rounded-xl cursor-pointer transition-all hover:border-[var(--accent)]"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-secondary)' }}
                 >
@@ -295,7 +307,7 @@ export default function PostFormPage() {
                 </label>
 
                 {/* Video Upload */}
-                <label 
+                <label
                   className="flex flex-col items-center justify-center h-28 border-2 border-dashed rounded-xl cursor-pointer transition-all hover:border-[var(--accent)]"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-secondary)' }}
                 >
@@ -334,7 +346,7 @@ export default function PostFormPage() {
             >
               {isPending ? (
                 <>
-                  <div 
+                  <div
                     className="w-4 h-4 border-2 rounded-full animate-spin"
                     style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white' }}
                   />
@@ -349,8 +361,8 @@ export default function PostFormPage() {
               onClick={() => navigate(-1)}
               disabled={isPending}
               className="px-5 py-3 font-medium rounded-xl border transition-colors"
-              style={{ 
-                borderColor: 'var(--border)', 
+              style={{
+                borderColor: 'var(--border)',
                 color: 'var(--text-primary)',
                 backgroundColor: 'transparent'
               }}

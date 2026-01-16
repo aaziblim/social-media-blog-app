@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { useQuery } from '@tanstack/react-query'
-import { fetchLivestreams } from '../api'
+import { fetchLivestreams, fetchMyCommunities } from '../api'
 import { useFollow } from '../hooks/useFollow'
+import type { Community } from '../types'
 
 interface MobileMenuSheetProps {
   open: boolean
@@ -77,16 +78,16 @@ export default function MobileMenuSheet({ open, onClose }: MobileMenuSheetProps)
   return (
     <>
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm md:hidden animate-fadeIn"
         onClick={onClose}
       />
-      
+
       {/* Sheet */}
-      <div 
+      <div
         ref={sheetRef}
         className="fixed bottom-0 left-0 right-0 z-[70] md:hidden rounded-t-2xl overflow-hidden animate-slideUp"
-        style={{ 
+        style={{
           backgroundColor: 'var(--bg-primary)',
         }}
       >
@@ -94,16 +95,16 @@ export default function MobileMenuSheet({ open, onClose }: MobileMenuSheetProps)
         <div className="flex justify-center pt-3 pb-2">
           <div className="w-9 h-1 rounded-full" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
         </div>
-        
+
         {/* User Section (if logged in) */}
         {user && (
           <div className="px-5 pb-4">
-            <button 
+            <button
               onClick={() => handleNavigate(`/user/${user.username}`)}
               className="w-full flex items-center gap-3 p-3 rounded-2xl transition-colors active:bg-[var(--bg-tertiary)]"
               style={{ backgroundColor: 'var(--bg-secondary)' }}
             >
-              <div 
+              <div
                 className="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-semibold overflow-hidden"
                 style={{ backgroundColor: 'var(--accent)' }}
               >
@@ -125,25 +126,25 @@ export default function MobileMenuSheet({ open, onClose }: MobileMenuSheetProps)
             </button>
           </div>
         )}
-        
+
         {/* Menu Items */}
         <div className="px-5 pb-6">
           {/* Primary Actions */}
           <div className="rounded-2xl overflow-hidden mb-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-            <MenuItem 
+            <MenuItem
               icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>}
               label="Home"
               isActive={location.pathname === '/'}
               onClick={() => handleNavigate('/')}
             />
-            <MenuItem 
+            <MenuItem
               icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>}
               label="Explore"
               isActive={location.pathname === '/explore'}
               onClick={() => handleNavigate('/explore')}
             />
-            <MenuItem 
-              icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>}
+            <MenuItem
+              icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" /></svg>}
               label="Live"
               isActive={location.pathname.startsWith('/live')}
               onClick={() => handleNavigate('/live')}
@@ -151,23 +152,23 @@ export default function MobileMenuSheet({ open, onClose }: MobileMenuSheetProps)
               badgeColor="#FF3B30"
             />
           </div>
-          
+
           {/* Secondary Actions */}
           <div className="rounded-2xl overflow-hidden mb-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
             {user && (
               <>
-                <MenuItem 
+                <MenuItem
                   icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg>}
                   label="Saved Posts"
                   onClick={() => handleNavigate('/?tab=saved')}
                 />
-                <MenuItem 
-                  icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>}
+                <MenuItem
+                  icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path d="M3 3v18h18" /><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" /></svg>}
                   label="Creator Dashboard"
                   onClick={() => handleNavigate('/dashboard')}
                 />
-                <MenuItem 
-                  icon={<svg viewBox="0 0 22 22" className="w-5 h-5"><path fill="#1DA1F2" d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681.132-.637.075-1.299-.165-1.903.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z"/></svg>}
+                <MenuItem
+                  icon={<svg viewBox="0 0 22 22" className="w-5 h-5"><path fill="#1DA1F2" d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681.132-.637.075-1.299-.165-1.903.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" /></svg>}
                   label="Get Verified"
                   onClick={() => handleNavigate('/get-verified')}
                   badge="NEW"
@@ -175,22 +176,25 @@ export default function MobileMenuSheet({ open, onClose }: MobileMenuSheetProps)
                 />
               </>
             )}
-            <MenuItem 
+            <MenuItem
               icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>}
               label="Settings"
               onClick={() => handleNavigate('/settings')}
             />
-            <MenuItem 
+            <MenuItem
               icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>}
               label="About"
               onClick={() => handleNavigate('/about')}
               isLast
             />
           </div>
-          
+
+          {/* Communities Section */}
+          {user && <CommunitiesSection onNavigate={handleNavigate} currentPath={location.pathname} />}
+
           {/* Auth Actions */}
           {user ? (
-            <button 
+            <button
               onClick={handleLogout}
               className="w-full py-3.5 rounded-2xl text-center font-medium transition-colors active:opacity-80"
               style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--danger)' }}
@@ -199,14 +203,14 @@ export default function MobileMenuSheet({ open, onClose }: MobileMenuSheetProps)
             </button>
           ) : (
             <div className="flex gap-3">
-              <button 
+              <button
                 onClick={() => handleNavigate('/login')}
                 className="flex-1 py-3.5 rounded-2xl text-center font-medium transition-colors active:opacity-80"
                 style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
               >
                 Sign In
               </button>
-              <button 
+              <button
                 onClick={() => handleNavigate('/register')}
                 className="flex-1 py-3.5 rounded-2xl text-center font-medium text-white transition-colors active:opacity-80"
                 style={{ backgroundColor: 'var(--accent)' }}
@@ -217,7 +221,7 @@ export default function MobileMenuSheet({ open, onClose }: MobileMenuSheetProps)
           )}
         </div>
       </div>
-      
+
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; }
@@ -234,16 +238,133 @@ export default function MobileMenuSheet({ open, onClose }: MobileMenuSheetProps)
   )
 }
 
+// Communities section for mobile
+function CommunitiesSection({ onNavigate, currentPath }: { onNavigate: (href: string) => void; currentPath: string }) {
+  const { user } = useAuth()
+  const [isExpanded, setIsExpanded] = useState(true)
+
+  const { data: communities, isLoading } = useQuery({
+    queryKey: ['myCommunities'],
+    queryFn: fetchMyCommunities,
+    enabled: !!user,
+    staleTime: 60000,
+  })
+
+  if (!user) return null
+
+  return (
+    <div className="rounded-2xl overflow-hidden mb-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+      {/* Header */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between px-4 py-3.5"
+        style={{ borderBottom: isExpanded ? '0.5px solid var(--border-light)' : 'none' }}
+      >
+        <div className="flex items-center gap-3">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5" style={{ color: 'var(--text-secondary)' }}>
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          <span className="font-medium" style={{ color: 'var(--text-primary)' }}>Communities</span>
+        </div>
+        <svg
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+          className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          style={{ color: 'var(--text-tertiary)' }}
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+
+      {/* Content */}
+      {isExpanded && (
+        <div className="px-2 pb-2">
+          {isLoading ? (
+            <div className="py-4 flex justify-center">
+              <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }} />
+            </div>
+          ) : communities && communities.length > 0 ? (
+            <div className="space-y-1 py-2">
+              {communities.slice(0, 5).map((community: Community) => {
+                const isActive = currentPath === `/c/${community.slug}`
+                return (
+                  <button
+                    key={community.id}
+                    onClick={() => onNavigate(`/c/${community.slug}`)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors active:bg-[var(--bg-tertiary)]"
+                    style={{
+                      backgroundColor: isActive ? 'var(--accent-alpha)' : 'transparent',
+                      color: isActive ? 'var(--accent)' : 'var(--text-primary)'
+                    }}
+                  >
+                    <div
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold overflow-hidden shrink-0"
+                      style={{ backgroundColor: 'var(--bg-tertiary)' }}
+                    >
+                      {community.icon_url ? (
+                        <img src={community.icon_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{community.name.charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <span className="text-sm font-medium truncate">{community.name}</span>
+                    {isActive && (
+                      <span className="ml-auto w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--accent)' }} />
+                    )}
+                  </button>
+                )
+              })}
+              {communities.length > 5 && (
+                <button
+                  onClick={() => onNavigate('/communities/discover')}
+                  className="w-full text-center py-2 text-xs font-medium"
+                  style={{ color: 'var(--accent)' }}
+                >
+                  +{communities.length - 5} more
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="py-4 text-center">
+              <p className="text-xs mb-2" style={{ color: 'var(--text-tertiary)' }}>No communities yet</p>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex gap-2 pt-2" style={{ borderTop: '0.5px solid var(--border-light)' }}>
+            <button
+              onClick={() => onNavigate('/communities/discover')}
+              className="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-colors active:opacity-80"
+              style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent)' }}
+            >
+              🔍 Discover
+            </button>
+            <button
+              onClick={() => onNavigate('/communities/new')}
+              className="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-colors active:opacity-80"
+              style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+            >
+              ⊕ Create
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Clean menu item component
-function MenuItem({ 
-  icon, 
-  label, 
-  isActive, 
-  onClick, 
+function MenuItem({
+  icon,
+  label,
+  isActive,
+  onClick,
   badge,
   badgeColor,
-  isLast 
-}: { 
+  isLast
+}: {
   icon: React.ReactNode
   label: string
   isActive?: boolean
@@ -256,7 +377,7 @@ function MenuItem({
     <button
       onClick={onClick}
       className="w-full flex items-center gap-3 px-4 py-3.5 transition-colors active:bg-[var(--bg-tertiary)]"
-      style={{ 
+      style={{
         color: isActive ? 'var(--accent)' : 'var(--text-primary)',
         borderBottom: isLast ? 'none' : '0.5px solid var(--border-light)'
       }}
@@ -266,7 +387,7 @@ function MenuItem({
       </span>
       <span className="flex-1 text-left font-medium">{label}</span>
       {badge && (
-        <span 
+        <span
           className="px-2 py-0.5 rounded text-[10px] font-bold text-white"
           style={{ backgroundColor: badgeColor }}
         >
@@ -317,12 +438,12 @@ function QuickAccessContent({ onClose }: { onClose: () => void }) {
     <div className="space-y-4">
       {/* User Stats (if logged in) */}
       {user && stats && (
-        <div 
+        <div
           className="p-4 rounded-2xl"
           style={{ backgroundColor: 'var(--bg-tertiary)' }}
         >
           <Link to={`/user/${user.username}`} onClick={onClose} className="flex items-center gap-3 mb-4">
-            <div 
+            <div
               className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-bold overflow-hidden"
               style={{ backgroundColor: 'var(--accent)' }}
             >
@@ -353,7 +474,7 @@ function QuickAccessContent({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       )}
-      
+
       {/* Navigation Links */}
       <div className="space-y-1">
         {navItems.map((item) => (
@@ -361,7 +482,7 @@ function QuickAccessContent({ onClose }: { onClose: () => void }) {
             key={item.href}
             onClick={() => handleClick(item.href)}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all active:scale-[0.98]"
-            style={{ 
+            style={{
               backgroundColor: item.isActive ? 'var(--accent-alpha)' : 'transparent',
               color: item.isActive ? 'var(--accent)' : 'var(--text-primary)'
             }}
@@ -380,7 +501,7 @@ function QuickAccessContent({ onClose }: { onClose: () => void }) {
 
 function TrendingContent({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate()
-  
+
   const topics = [
     { tag: 'react', posts: 234, hot: true },
     { tag: 'typescript', posts: 189, hot: true },
@@ -461,18 +582,18 @@ function PeopleContent({ onClose }: { onClose: () => void }) {
       {suggestions && suggestions.length > 0 ? (
         suggestions.map((s, i) => {
           const following = isFollowing(s.username)
-          
+
           return (
-            <div 
+            <div
               key={s.username}
               className="flex items-center justify-between p-3 rounded-xl"
               style={{ backgroundColor: 'var(--bg-tertiary)' }}
             >
-              <button 
+              <button
                 onClick={() => handleProfileClick(s.username)}
                 className="flex items-center gap-3 text-left"
               >
-                <div 
+                <div
                   className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold overflow-hidden"
                   style={{ backgroundColor: colors[i % colors.length] }}
                 >
@@ -496,9 +617,9 @@ function PeopleContent({ onClose }: { onClose: () => void }) {
                   onClick={() => toggleFollow(s.username)}
                   disabled={followLoading}
                   className="px-4 py-2 rounded-full text-sm font-semibold transition-all"
-                  style={{ 
-                    backgroundColor: following ? 'var(--bg-primary)' : 'var(--accent)', 
-                    color: following ? 'var(--text-primary)' : 'white' 
+                  style={{
+                    backgroundColor: following ? 'var(--bg-primary)' : 'var(--accent)',
+                    color: following ? 'var(--text-primary)' : 'white'
                   }}
                 >
                   {following ? 'Following' : 'Follow'}
@@ -512,7 +633,7 @@ function PeopleContent({ onClose }: { onClose: () => void }) {
           No suggestions available
         </p>
       )}
-      
+
       <button
         onClick={() => { navigate('/explore'); onClose() }}
         className="w-full py-3 rounded-xl text-sm font-semibold"
@@ -561,8 +682,8 @@ function LiveContent({ onClose }: { onClose: () => void }) {
               style={{ backgroundColor: 'var(--bg-tertiary)' }}
             >
               <div className="relative">
-                <img 
-                  src={stream.host.profile_image || '/default-avatar.png'} 
+                <img
+                  src={stream.host.profile_image || '/default-avatar.png'}
                   alt={stream.host.username}
                   className="w-12 h-12 rounded-full object-cover"
                   style={{ border: '3px solid #FF3B30' }}
@@ -595,7 +716,7 @@ function LiveContent({ onClose }: { onClose: () => void }) {
           <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>Be the first to go live!</p>
         </div>
       )}
-      
+
       <button
         onClick={() => { navigate('/live'); onClose() }}
         className="w-full py-3 rounded-xl text-sm font-semibold text-white"

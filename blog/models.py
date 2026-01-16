@@ -1,11 +1,54 @@
+import uuid
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils.text import slugify
-import uuid
 
 # Create your models here.
+
+class Community(models.Model):
+    """
+    A community where users can gather and share.
+    Steve Jobs would want this to be simple, focus on the 'why'.
+    """
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=140, unique=True, blank=True)
+    description = models.TextField(blank=True)
+    cover_image = models.ImageField(upload_to='community_covers', blank=True, null=True)
+    icon = models.ImageField(upload_to='community_icons', blank=True, null=True)
+    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_communities')
+    members = models.ManyToManyField(User, through='CommunityMembership', related_name='joined_communities')
+    
+    is_private = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "Communities"
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+class CommunityMembership(models.Model):
+    """Relationship between User and Community"""
+    ROLE_CHOICES = [
+        ('member', 'Member'),
+        ('moderator', 'Moderator'),
+        ('admin', 'Admin'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    community = models.ForeignKey(Community, on_delete=models.CASCADE)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='member')
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'community')
+
 class Post(models.Model):
     title = models.CharField(max_length=100)
     slug = models.SlugField(max_length=140, unique=True, blank=True)
@@ -15,8 +58,10 @@ class Post(models.Model):
     post_video = models.FileField(upload_to='post_videos', blank=True, null=True)
     date_posted = models.DateTimeField(default=timezone.now)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
+    community = models.ForeignKey(Community, on_delete=models.SET_NULL, null=True, blank=True, related_name='posts')
     likes = models.ManyToManyField(User, related_name='liked_posts', blank=True)
     dislikes = models.ManyToManyField(User, related_name='disliked_posts', blank=True)
+    views_count = models.PositiveIntegerField(default=0, help_text="Number of times this post has been viewed")
 
     def get_absolute_url(self):
         return reverse('blog-home')

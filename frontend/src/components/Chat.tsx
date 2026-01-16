@@ -2,17 +2,19 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { 
-  fetchConversations, 
-  startConversation, 
-  fetchMessages, 
+import {
+  fetchConversations,
+  startConversation,
+  fetchMessages,
   sendMessage as sendMessageApi,
+  sendEncryptedMessage,
   conversationAction,
   fetchMessageRequests,
   fetchUnreadCount
 } from '../api'
 import { useChatWebSocket } from '../hooks/useChatWebSocket'
-import type { Conversation, ChatParticipant } from '../types'
+import { useE2EE } from '../hooks/useE2EE'
+import type { Conversation, ChatParticipant, Message } from '../types'
 
 // ============ TIME HELPERS ============
 
@@ -21,7 +23,7 @@ function formatMessageTime(date: string): string {
   const now = new Date()
   const diffMs = now.getTime() - d.getTime()
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-  
+
   if (diffDays === 0) {
     return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
   } else if (diffDays === 1) {
@@ -38,7 +40,7 @@ function formatLastSeen(date?: string): string {
   const now = new Date()
   const diffMs = now.getTime() - d.getTime()
   const diffMins = Math.floor(diffMs / (1000 * 60))
-  
+
   if (diffMins < 1) return 'Just now'
   if (diffMins < 60) return `${diffMins}m ago`
   const diffHours = Math.floor(diffMins / 60)
@@ -63,9 +65,15 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  
+
   // WebSocket connection for real-time messaging
   const { status: wsStatus, sendMessage: wsSendMessage, sendTyping, markAsRead, typingStatus } = useChatWebSocket()
+
+  // E2EE encryption hook
+  const { isEnabled: e2eeEnabled, encryptForRecipient, processMessageForDisplay } = useE2EE()
+
+  // Track decrypted message content (Maps message ID to decrypted text)
+  const [decryptedMessages, setDecryptedMessages] = useState<Record<string, string>>({})
 
   // Fetch conversations
   const { data: conversations = [], isLoading: loadingConversations } = useQuery({
@@ -102,7 +110,7 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
 
   // Accept/decline request mutation
   const requestActionMutation = useMutation({
-    mutationFn: ({ id, action }: { id: string; action: 'accept' | 'decline' }) => 
+    mutationFn: ({ id, action }: { id: string; action: 'accept' | 'decline' }) =>
       conversationAction(id, action),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['message-requests'] })
@@ -135,11 +143,11 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
     setNewMessage(e.target.value)
     e.target.style.height = 'auto'
     e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
-    
+
     // Send typing indicator
     if (activeConversation && wsStatus === 'connected') {
       sendTyping(activeConversation.id, true)
-      
+
       // Clear previous timeout and set new one to stop typing indicator
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current)
@@ -163,29 +171,54 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
     setNewMessage('')
   }, [])
 
-  const sendMessage = useCallback(() => {
+  const getOtherParticipant = useCallback((convo: Conversation): ChatParticipant | undefined => {
+    return convo.participants.find(p => p.username !== user?.username)
+  }, [user?.username])
+
+  const sendMessage = useCallback(async () => {
     if (!newMessage.trim() || !activeConversation || sendMutation.isPending) return
-    
+
     const content = newMessage.trim()
-    
+    const otherUser = getOtherParticipant(activeConversation)
+
+    // Clear input immediately for responsiveness
+    setNewMessage('')
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto'
+    }
+
+    // Try to encrypt the message if E2EE is enabled
+    let finalContent = content
+    let isEncrypted = false
+
+    if (e2eeEnabled && otherUser) {
+      const encrypted = await encryptForRecipient(otherUser.username, content)
+      if (encrypted) {
+        finalContent = encrypted
+        isEncrypted = true
+      }
+    }
+
     // Try WebSocket first, fallback to API
     if (wsStatus === 'connected') {
-      wsSendMessage(activeConversation.id, content)
-      setNewMessage('')
-      if (inputRef.current) {
-        inputRef.current.style.height = 'auto'
+      // For encrypted messages via WebSocket, we need to use REST API
+      // since WebSocket doesn't support is_encrypted flag yet
+      if (isEncrypted) {
+        sendEncryptedMessage(activeConversation.id, finalContent)
+      } else {
+        wsSendMessage(activeConversation.id, finalContent)
       }
       // Stop typing indicator
       sendTyping(activeConversation.id, false)
     } else {
       // Fallback to REST API
-      sendMutation.mutate(content)
-      setNewMessage('')
-      if (inputRef.current) {
-        inputRef.current.style.height = 'auto'
+      if (isEncrypted) {
+        sendEncryptedMessage(activeConversation.id, finalContent)
+      } else {
+        sendMutation.mutate(content)
       }
     }
-  }, [newMessage, activeConversation, sendMutation, wsStatus, wsSendMessage, sendTyping])
+  }, [newMessage, activeConversation, sendMutation, wsStatus, wsSendMessage, sendTyping, e2eeEnabled, encryptForRecipient, getOtherParticipant])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -204,8 +237,29 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
 
   const requestCount = messageRequests.length
 
-  const getOtherParticipant = (convo: Conversation): ChatParticipant | undefined => {
-    return convo.participants.find(p => p.username !== user?.username)
+  // Decrypt messages when they load
+  useEffect(() => {
+    const decryptAll = async () => {
+      for (const msg of messages) {
+        if (msg.is_encrypted && !decryptedMessages[msg.id]) {
+          const senderUsername = msg.sender.username
+          const decrypted = await processMessageForDisplay(msg, senderUsername)
+          setDecryptedMessages(prev => ({ ...prev, [msg.id]: decrypted }))
+        }
+      }
+    }
+    if (messages.length > 0) {
+      decryptAll()
+    }
+  }, [messages, decryptedMessages, processMessageForDisplay])
+
+  // Helper to get display content for a message
+  const getMessageContent = (msg: Message): string => {
+    if (msg.is_unsent) return '[Message unsent]'
+    if (msg.is_encrypted) {
+      return decryptedMessages[msg.id] || '🔒 Decrypting...'
+    }
+    return msg.content
   }
 
   if (!isOpen) return null
@@ -213,24 +267,24 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
   return (
     <>
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 z-[60] bg-black/30 backdrop-blur-sm animate-fadeIn"
         onClick={onClose}
       />
-      
+
       {/* Drawer */}
-      <div 
+      <div
         className="fixed right-0 top-0 bottom-0 h-full z-[70] w-full max-w-md flex flex-col animate-slideInFromRight shadow-2xl border-l"
         style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)' }}
       >
         {/* Header */}
-        <div 
+        <div
           className="flex items-center justify-between px-4 h-14 border-b"
           style={{ borderColor: 'var(--border)' }}
         >
           {view === 'chat' ? (
             <>
-              <button 
+              <button
                 onClick={closeConversation}
                 className="p-2 -ml-2 rounded-full transition-colors hover:bg-[var(--bg-tertiary)]"
                 style={{ color: 'var(--text-primary)' }}
@@ -252,13 +306,13 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
                       )}
                     </div>
                     {getOtherParticipant(activeConversation)?.is_online && (
-                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2" 
-                        style={{ backgroundColor: 'var(--success)', borderColor: 'var(--bg-primary)' }} 
+                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2"
+                        style={{ backgroundColor: 'var(--success)', borderColor: 'var(--bg-primary)' }}
                       />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <Link 
+                    <Link
                       to={`/user/${getOtherParticipant(activeConversation)?.username}`}
                       className="font-semibold text-sm block truncate hover:underline"
                       style={{ color: 'var(--text-primary)' }}
@@ -284,7 +338,7 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
             </>
           ) : view === 'requests' ? (
             <>
-              <button 
+              <button
                 onClick={() => setView('list')}
                 className="p-2 -ml-2 rounded-full transition-colors hover:bg-[var(--bg-tertiary)]"
                 style={{ color: 'var(--text-primary)' }}
@@ -302,7 +356,7 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
               <h2 className="font-semibold text-lg" style={{ color: 'var(--text-primary)' }}>Messages</h2>
               <div className="flex items-center gap-1">
                 {requestCount > 0 && (
-                  <button 
+                  <button
                     onClick={() => setView('requests')}
                     className="relative p-2 rounded-full transition-colors hover:bg-[var(--bg-tertiary)]"
                     style={{ color: 'var(--text-secondary)' }}
@@ -312,7 +366,7 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
                       <circle cx="9" cy="7" r="4" />
                       <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
-                    <span 
+                    <span
                       className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center text-white"
                       style={{ backgroundColor: 'var(--accent)' }}
                     >
@@ -320,7 +374,7 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
                     </span>
                   </button>
                 )}
-                <button 
+                <button
                   onClick={onClose}
                   className="p-2 rounded-full transition-colors hover:bg-[var(--bg-tertiary)]"
                   style={{ color: 'var(--text-secondary)' }}
@@ -345,7 +399,7 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
                 </div>
               ) : conversations.length === 0 ? (
                 <div className="p-8 text-center">
-                  <div 
+                  <div
                     className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
                     style={{ backgroundColor: 'var(--bg-tertiary)' }}
                   >
@@ -378,8 +432,8 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
                           )}
                         </div>
                         {other?.is_online && (
-                          <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2" 
-                            style={{ backgroundColor: 'var(--success)', borderColor: 'var(--bg-primary)' }} 
+                          <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2"
+                            style={{ backgroundColor: 'var(--success)', borderColor: 'var(--bg-primary)' }}
                           />
                         )}
                       </div>
@@ -395,9 +449,9 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <p 
+                          <p
                             className="text-sm truncate flex-1"
-                            style={{ 
+                            style={{
                               color: convo.unread_count > 0 ? 'var(--text-primary)' : 'var(--text-secondary)',
                               fontWeight: convo.unread_count > 0 ? 600 : 400
                             }}
@@ -406,7 +460,7 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
                             {convo.last_message?.content || 'Start chatting'}
                           </p>
                           {convo.unread_count > 0 && (
-                            <span 
+                            <span
                               className="shrink-0 min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold flex items-center justify-center text-white"
                               style={{ backgroundColor: 'var(--accent)' }}
                             >
@@ -423,7 +477,7 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
           ) : view === 'requests' ? (
             // Message Requests
             <div className="p-4">
-              <div 
+              <div
                 className="rounded-xl p-4 mb-4"
                 style={{ backgroundColor: 'var(--bg-tertiary)' }}
               >
@@ -431,7 +485,7 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
                   <strong style={{ color: 'var(--text-primary)' }}>People who don't follow you</strong> can send you message requests. Accept to start chatting.
                 </p>
               </div>
-              
+
               {messageRequests.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No message requests</p>
@@ -442,58 +496,59 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
                     const fromUser = getOtherParticipant(convo)
                     if (!fromUser) return null
                     return (
-                    <div 
-                      key={convo.id}
-                      className="rounded-xl p-4"
-                      style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-light)' }}
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-                          {fromUser.profile_image ? (
-                            <img src={fromUser.profile_image} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-white font-semibold text-sm" style={{ backgroundColor: 'var(--accent)' }}>
-                              {fromUser.username.slice(0, 1).toUpperCase()}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
-                            {fromUser.first_name || fromUser.username}
-                          </p>
-                          <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                            @{fromUser.username} · {formatMessageTime(convo.updated_at)}
-                          </p>
-                        </div>
-                      </div>
-                      {convo.last_message && (
-                      <p 
-                        className="text-sm mb-4 line-clamp-2"
-                        style={{ color: 'var(--text-secondary)' }}
+                      <div
+                        key={convo.id}
+                        className="rounded-xl p-4"
+                        style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-light)' }}
                       >
-                        "{convo.last_message.content}"
-                      </p>
-                      )}
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => acceptRequest(convo.id)}
-                          disabled={requestActionMutation.isPending}
-                          className="flex-1 py-2 rounded-xl text-sm font-medium text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
-                          style={{ backgroundColor: 'var(--accent)' }}
-                        >
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => declineRequest(convo.id)}
-                          disabled={requestActionMutation.isPending}
-                          className="flex-1 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
-                          style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
-                        >
-                          Decline
-                        </button>
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                            {fromUser.profile_image ? (
+                              <img src={fromUser.profile_image} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-white font-semibold text-sm" style={{ backgroundColor: 'var(--accent)' }}>
+                                {fromUser.username.slice(0, 1).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                              {fromUser.first_name || fromUser.username}
+                            </p>
+                            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                              @{fromUser.username} · {formatMessageTime(convo.updated_at)}
+                            </p>
+                          </div>
+                        </div>
+                        {convo.last_message && (
+                          <p
+                            className="text-sm mb-4 line-clamp-2"
+                            style={{ color: 'var(--text-secondary)' }}
+                          >
+                            "{convo.last_message.content}"
+                          </p>
+                        )}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => acceptRequest(convo.id)}
+                            disabled={requestActionMutation.isPending}
+                            className="flex-1 py-2 rounded-xl text-sm font-medium text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+                            style={{ backgroundColor: 'var(--accent)' }}
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => declineRequest(convo.id)}
+                            disabled={requestActionMutation.isPending}
+                            className="flex-1 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+                            style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+                          >
+                            Decline
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  )})}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -516,7 +571,7 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
                     const isOwn = msg.sender.username === user?.username
                     const showAvatar = !isOwn && (i === 0 || messages[i - 1].sender.username !== msg.sender.username)
                     const showTime = i === messages.length - 1 || messages[i + 1].sender.username !== msg.sender.username
-                    
+
                     return (
                       <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'} gap-2`}>
                         {!isOwn && (
@@ -535,21 +590,23 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
                           </div>
                         )}
                         <div className={`max-w-[75%] ${isOwn ? 'items-end' : 'items-start'}`}>
-                          <div 
-                            className={`px-4 py-2.5 rounded-2xl text-[15px] leading-relaxed ${
-                              isOwn 
-                                ? 'rounded-br-md' 
-                                : 'rounded-bl-md'
-                            }`}
-                            style={{ 
+                          <div
+                            className={`px-4 py-2.5 rounded-2xl text-[15px] leading-relaxed ${isOwn
+                              ? 'rounded-br-md'
+                              : 'rounded-bl-md'
+                              }`}
+                            style={{
                               backgroundColor: isOwn ? 'var(--accent)' : 'var(--bg-tertiary)',
                               color: isOwn ? 'white' : 'var(--text-primary)'
                             }}
                           >
-                            {msg.content}
+                            {getMessageContent(msg)}
+                            {msg.is_encrypted && (
+                              <span title="End-to-end encrypted" className="ml-1 opacity-60">🔒</span>
+                            )}
                           </div>
                           {showTime && (
-                            <p 
+                            <p
                               className={`text-[10px] mt-1 ${isOwn ? 'text-right' : 'text-left'}`}
                               style={{ color: 'var(--text-tertiary)' }}
                             >
@@ -562,7 +619,7 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
                     )
                   })
                 )}
-                
+
                 {/* Sending indicator */}
                 {sendMutation.isPending && (
                   <div className="flex justify-end">
@@ -575,12 +632,12 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
                     </div>
                   </div>
                 )}
-                
+
                 {/* Typing indicator */}
                 {activeConversation && typingStatus[activeConversation.id]?.isTyping && (
                   <div className="flex justify-start gap-2">
                     <div className="w-7 h-7 shrink-0" />
-                    <div 
+                    <div
                       className="px-4 py-2.5 rounded-2xl rounded-bl-md"
                       style={{ backgroundColor: 'var(--bg-tertiary)' }}
                     >
@@ -592,7 +649,7 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
                     </div>
                   </div>
                 )}
-                
+
                 <div ref={messagesEndRef} />
               </div>
             </div>
@@ -601,11 +658,11 @@ export function ChatDrawer({ isOpen, onClose, initialConversation }: ChatDrawerP
 
         {/* Input (only in chat view) */}
         {view === 'chat' && (
-          <div 
+          <div
             className="p-3 border-t"
             style={{ borderColor: 'var(--border)' }}
           >
-            <div 
+            <div
               className="flex items-end gap-2 rounded-2xl px-4 py-2"
               style={{ backgroundColor: 'var(--bg-tertiary)' }}
             >
@@ -660,7 +717,7 @@ export function ChatButton({ onClick, unreadCount = 0 }: ChatButtonProps) {
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
       </svg>
       {unreadCount > 0 && (
-        <span 
+        <span
           className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center text-white"
           style={{ backgroundColor: 'var(--danger)' }}
         >
@@ -710,7 +767,7 @@ export function MessageButton({ targetUser, isFollowing, onOpenChat }: MessageBu
 
   const handleClick = () => {
     if (!user) return
-    
+
     if (isFollowing) {
       // Follower - start conversation directly
       startConvoMutation.mutate()
@@ -731,7 +788,7 @@ export function MessageButton({ targetUser, isFollowing, onOpenChat }: MessageBu
         onClick={handleClick}
         disabled={startConvoMutation.isPending}
         className="flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
-        style={{ 
+        style={{
           borderColor: 'var(--border)',
           color: 'var(--text-primary)',
           backgroundColor: 'transparent'
@@ -750,17 +807,17 @@ export function MessageButton({ targetUser, isFollowing, onOpenChat }: MessageBu
       {/* Request Modal */}
       {showRequestModal && (
         <>
-          <div 
+          <div
             className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm animate-fadeIn"
             onClick={() => !sendFirstMsgMutation.isPending && setShowRequestModal(false)}
           />
-          <div 
+          <div
             className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90%] max-w-sm rounded-2xl p-5 animate-zoomIn"
             style={{ backgroundColor: 'var(--bg-primary)', boxShadow: 'var(--card-shadow)' }}
           >
             {sendFirstMsgMutation.isSuccess ? (
               <div className="text-center py-4">
-                <div 
+                <div
                   className="w-14 h-14 mx-auto mb-3 rounded-full flex items-center justify-center"
                   style={{ backgroundColor: 'rgba(52, 199, 89, 0.15)' }}
                 >
@@ -795,7 +852,7 @@ export function MessageButton({ targetUser, isFollowing, onOpenChat }: MessageBu
                   </div>
                 </div>
 
-                <div 
+                <div
                   className="rounded-xl p-3 mb-3"
                   style={{ backgroundColor: 'var(--bg-tertiary)' }}
                 >
@@ -810,7 +867,7 @@ export function MessageButton({ targetUser, isFollowing, onOpenChat }: MessageBu
                   placeholder="Write a message..."
                   rows={3}
                   className="w-full rounded-xl p-3 border resize-none outline-none text-sm"
-                  style={{ 
+                  style={{
                     backgroundColor: 'var(--bg-secondary)',
                     borderColor: 'var(--border-light)',
                     color: 'var(--text-primary)'
@@ -849,13 +906,13 @@ export function MessageButton({ targetUser, isFollowing, onOpenChat }: MessageBu
 
 export function useChatUnread(): number {
   const { user } = useAuth()
-  
+
   const { data } = useQuery({
     queryKey: ['unread-count'],
     queryFn: fetchUnreadCount,
     enabled: !!user,
     refetchInterval: 30000, // Poll every 30 seconds
   })
-  
+
   return data?.unread_count ?? 0
 }

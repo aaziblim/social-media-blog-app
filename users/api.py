@@ -4,7 +4,7 @@ from rest_framework import status, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import serializers
-from users.models import Profile, Follow
+from users.models import Profile, Follow, UserPublicKey
 from django.db.models import Count, Q
 
 
@@ -342,6 +342,73 @@ def explore_users_view(request):
     return Response(serializer.data)
 
 
+# ============ SEARCH API ============
+
+class SearchPostSerializer(serializers.ModelSerializer):
+    """Minimal post serializer for search results."""
+    author = SuggestionUserSerializer(read_only=True)
+    post_image_url = serializers.SerializerMethodField()
+    likes_count = serializers.SerializerMethodField()
+    comments_count = serializers.SerializerMethodField()
+
+    class Meta:
+        from blog.models import Post
+        model = Post
+        fields = ['id', 'public_id', 'slug', 'title', 'content', 'post_image_url', 'date_posted', 'author', 'likes_count', 'comments_count']
+
+    def get_post_image_url(self, obj):
+        if not obj.post_image:
+            return None
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(obj.post_image.url)
+        return obj.post_image.url
+
+    def get_likes_count(self, obj):
+        return obj.likes.count()
+
+    def get_comments_count(self, obj):
+        return obj.comments.count()
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def search_view(request):
+    """Search for users and posts."""
+    from blog.models import Post
+    
+    query = request.GET.get('q', '').strip()
+    
+    # Return empty results if query is too short
+    if len(query) < 2:
+        return Response({'users': [], 'posts': []})
+    
+    # Search users by username, first_name, last_name
+    users = User.objects.filter(
+        Q(username__icontains=query) |
+        Q(first_name__icontains=query) |
+        Q(last_name__icontains=query)
+    ).select_related('profile').annotate(
+        follower_count=Count('followers')
+    ).order_by('-follower_count')
+    
+    if request.user.is_authenticated:
+        users = users.exclude(id=request.user.id)
+    
+    users = users[:10]  # Limit to 10 user results
+    
+    # Search posts by title and content
+    posts = Post.objects.filter(
+        Q(title__icontains=query) |
+        Q(content__icontains=query)
+    ).select_related('author', 'author__profile').order_by('-date_posted')[:10]
+    
+    return Response({
+        'users': SuggestionUserSerializer(users, many=True, context={'request': request}).data,
+        'posts': SearchPostSerializer(posts, many=True, context={'request': request}).data
+    })
+
+
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def following_list_view(request):
@@ -399,7 +466,8 @@ class DirectMessageSerializer(serializers.ModelSerializer):
         model = DirectMessage
         fields = [
             'id', 'conversation', 'sender', 'content', 'created_at', 
-            'read_at', 'message_type', 'attachment_url', 'shared_post_id', 'is_unsent'
+            'read_at', 'message_type', 'attachment_url', 'shared_post_id', 'is_unsent',
+            'is_encrypted'  # E2EE: True if content is ciphertext
         ]
         read_only_fields = ['id', 'sender', 'created_at', 'read_at']
 
@@ -507,11 +575,14 @@ def conversation_messages_view(request, conversation_id):
         message_type = request.data.get('message_type', 'text')
         attachment_url = request.data.get('attachment_url')
         shared_post_id = request.data.get('shared_post_id')
+        is_encrypted = request.data.get('is_encrypted', False)  # E2EE support
         
         if not content and message_type == 'text':
             return Response({'error': 'Message cannot be empty'}, status=status.HTTP_400_BAD_REQUEST)
         
-        if len(content) > 5000:
+        # For encrypted messages, allow larger content (base64 overhead)
+        max_length = 10000 if is_encrypted else 5000
+        if len(content) > max_length:
             return Response({'error': 'Message too long'}, status=status.HTTP_400_BAD_REQUEST)
         
         # Create message
@@ -521,7 +592,8 @@ def conversation_messages_view(request, conversation_id):
             content=content,
             message_type=message_type,
             attachment_url=attachment_url,
-            shared_post_id=shared_post_id
+            shared_post_id=shared_post_id,
+            is_encrypted=is_encrypted  # E2EE flag
         )
         
         # Update conversation timestamp
@@ -621,3 +693,303 @@ def unread_count_view(request):
     
     return Response({'unread_count': count})
 
+
+# ============ ACTIVITY / STREAK API ============
+
+from users.models import UserActivity
+from datetime import timedelta
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def user_streak_view(request):
+    """
+    Get user's weekly activity streak.
+    Also auto-records today's visit when called.
+    """
+    user = request.user
+    today = timezone.now().date()
+    
+    # Record today's activity (get_or_create to avoid duplicates)
+    UserActivity.objects.get_or_create(user=user, date=today)
+    
+    # Get the start of the current week (Monday)
+    # weekday() returns 0 for Monday, 6 for Sunday
+    days_since_monday = today.weekday()
+    week_start = today - timedelta(days=days_since_monday)
+    
+    # Get all activity records for this week
+    week_activities = UserActivity.objects.filter(
+        user=user,
+        date__gte=week_start,
+        date__lte=today
+    ).values_list('date', flat=True)
+    
+    activity_dates = set(week_activities)
+    
+    # Build array for Mon-Sun (7 days)
+    days = []
+    for i in range(7):
+        day_date = week_start + timedelta(days=i)
+        # Only mark days that have passed or are today
+        if day_date <= today:
+            days.append(day_date in activity_dates)
+        else:
+            days.append(False)  # Future days
+    
+    # Calculate current streak (consecutive days ending today or yesterday)
+    current_streak = 0
+    check_date = today
+    while True:
+        if UserActivity.objects.filter(user=user, date=check_date).exists():
+            current_streak += 1
+            check_date -= timedelta(days=1)
+        else:
+            break
+    
+    return Response({
+        'days': days,
+        'current_streak': current_streak,
+        'week_start': week_start.isoformat(),
+    })
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def community_pulse_view(request):
+    """
+    Get real-time community activity metrics.
+    Calculates a "pulse" percentage based on activity in the last hour.
+    """
+    from blog.models import Post, Comment
+    
+    now = timezone.now()
+    one_hour_ago = now - timedelta(hours=1)
+    
+    # Count activity in the last hour
+    posts_count = Post.objects.filter(date_posted__gte=one_hour_ago).count()
+    comments_count = Comment.objects.filter(created_at__gte=one_hour_ago).count()
+    
+    # Count likes in the last hour (harder since likes don't have timestamps)
+    # We'll use a different approach: count total active users in last 5 mins
+    five_mins_ago = now - timedelta(minutes=5)
+    from users.models import Profile
+    active_users = Profile.objects.filter(last_seen__gte=five_mins_ago).count()
+    
+    # Calculate pulse as a weighted score (0-100)
+    # More weight to active users since that's real-time engagement
+    raw_score = (posts_count * 15) + (comments_count * 5) + (active_users * 10)
+    
+    # Normalize to 0-100 range (cap at 100)
+    # Baseline: 20 (minimum pulse when site has any activity)
+    # A typical "busy" score would be around 50-80
+    pulse = min(100, max(20, 20 + raw_score))
+    
+    return Response({
+        'pulse': pulse,
+        'posts_count': posts_count,
+        'comments_count': comments_count,
+        'active_users': active_users,
+    })
+
+
+# ============ E2EE PUBLIC KEY API ============
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_public_key(request, username):
+    """
+    Fetch a user's public key for E2EE chat.
+    
+    SECURITY NOTES:
+    - Returns the X25519 public key for the specified user
+    - Used by clients to derive shared secrets for encryption
+    - Trust-on-first-use model (no key verification UI)
+    """
+    try:
+        user = User.objects.get(username=username)
+        public_key = UserPublicKey.objects.get(user=user)
+        return Response({
+            'username': username,
+            'public_key': public_key.key_data,
+            'updated_at': public_key.updated_at.isoformat()
+        })
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+    except UserPublicKey.DoesNotExist:
+        return Response({'error': 'Public key not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def set_public_key(request):
+    """
+    Set or update the current user's public key.
+    
+    SECURITY NOTES:
+    - Only accepts Base64-encoded X25519 public keys
+    - Key is validated for length (should be 32 bytes = ~44 chars base64)
+    - Overwrites any existing key (no key history)
+    """
+    key_data = request.data.get('public_key')
+    
+    if not key_data:
+        return Response({'error': 'public_key is required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Basic validation: X25519 public key should be ~44 chars in base64
+    if not isinstance(key_data, str) or len(key_data) < 40 or len(key_data) > 100:
+        return Response({'error': 'Invalid public key format'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    UserPublicKey.objects.update_or_create(
+        user=request.user,
+        defaults={'key_data': key_data}
+    )
+    
+    return Response({'status': 'ok', 'username': request.user.username})
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def get_my_public_key(request):
+    """
+    Get the current user's own public key.
+    Useful for checking if a key has been set.
+    """
+    try:
+        public_key = UserPublicKey.objects.get(user=request.user)
+        return Response({
+            'username': request.user.username,
+            'public_key': public_key.key_data,
+            'updated_at': public_key.updated_at.isoformat()
+        })
+    except UserPublicKey.DoesNotExist:
+        return Response({'error': 'No public key set'}, status=status.HTTP_404_NOT_FOUND)
+
+
+# ============ ACHIEVEMENTS API ============
+
+from users.models import UserAchievement
+
+
+def check_and_award_achievements(user):
+    """
+    Check and award any achievements the user has earned but not yet received.
+    This is called when fetching achievements to ensure real-time updates.
+    """
+    from blog.models import Post, Community
+    
+    earned = set(UserAchievement.objects.filter(user=user).values_list('achievement_id', flat=True))
+    new_achievements = []
+    
+    # First Post (1 post)
+    if 'first_post' not in earned:
+        if Post.objects.filter(author=user).exists():
+            UserAchievement.objects.create(user=user, achievement_id='first_post')
+            new_achievements.append('first_post')
+    
+    # Rising Star (10 posts)
+    if 'rising_star' not in earned:
+        if Post.objects.filter(author=user).count() >= 10:
+            UserAchievement.objects.create(user=user, achievement_id='rising_star')
+            new_achievements.append('rising_star')
+    
+    # Karma King (100 karma)
+    if 'karma_king' not in earned:
+        user_posts = Post.objects.filter(author=user)
+        total_likes = sum(post.total_likes for post in user_posts)
+        total_dislikes = sum(post.total_dislikes for post in user_posts)
+        karma = total_likes - total_dislikes
+        if karma >= 100:
+            UserAchievement.objects.create(user=user, achievement_id='karma_king')
+            new_achievements.append('karma_king')
+    
+    # Week Warrior (7-day streak)
+    if 'week_warrior' not in earned:
+        from users.models import UserActivity
+        from datetime import timedelta
+        today = timezone.now().date()
+        streak = 0
+        check_date = today
+        while UserActivity.objects.filter(user=user, date=check_date).exists():
+            streak += 1
+            check_date -= timedelta(days=1)
+        if streak >= 7:
+            UserAchievement.objects.create(user=user, achievement_id='week_warrior')
+            new_achievements.append('week_warrior')
+    
+    # Community Builder (5 communities)
+    if 'community_builder' not in earned:
+        joined_count = Community.objects.filter(members=user).count()
+        if joined_count >= 5:
+            UserAchievement.objects.create(user=user, achievement_id='community_builder')
+            new_achievements.append('community_builder')
+    
+    # Social Butterfly (50 followers)
+    if 'social_butterfly' not in earned:
+        if user.followers.count() >= 50:
+            UserAchievement.objects.create(user=user, achievement_id='social_butterfly')
+            new_achievements.append('social_butterfly')
+    
+    return new_achievements
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def pending_achievements_view(request):
+    """
+    Get pending achievements that haven't been shown to the user yet.
+    Also checks and awards any new achievements the user has earned.
+    """
+    user = request.user
+    
+    # Check for new achievements
+    check_and_award_achievements(user)
+    
+    # Get achievements not yet shown
+    pending = UserAchievement.objects.filter(user=user, shown_to_user=False)
+    
+    achievements = []
+    for achievement in pending:
+        achievements.append({
+            'id': achievement.achievement_id,
+            'earned_at': achievement.earned_at.isoformat()
+        })
+    
+    return Response({'pending': achievements})
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def mark_achievement_shown_view(request):
+    """
+    Mark an achievement as shown to the user.
+    """
+    achievement_id = request.data.get('achievement_id')
+    if not achievement_id:
+        return Response({'error': 'achievement_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        achievement = UserAchievement.objects.get(user=request.user, achievement_id=achievement_id)
+        achievement.shown_to_user = True
+        achievement.save(update_fields=['shown_to_user'])
+        return Response({'detail': 'Achievement marked as shown'})
+    except UserAchievement.DoesNotExist:
+        return Response({'error': 'Achievement not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def all_achievements_view(request):
+    """
+    Get all achievements the user has earned (for profile display).
+    """
+    achievements = UserAchievement.objects.filter(user=request.user)
+    
+    data = []
+    for achievement in achievements:
+        data.append({
+            'id': achievement.achievement_id,
+            'earned_at': achievement.earned_at.isoformat()
+        })
+    
+    return Response({'achievements': data})

@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Force class-based dark mode (Tailwind v4) */
+@variant dark (&:where(.dark, .dark *));
+
 /* Apple-inspired Design System */
 :root {
   /* Light Mode */
@@ -11,9 +14,9 @@
   --text-tertiary: #6e6e73;
   --border: #d2d2d7;
   --border-light: #e8e8ed;
-  --accent: #0071e3;
-  --accent-hover: #0077ed;
-  --accent-alpha: rgba(0, 113, 227, 0.1);
+  --accent: #0d9488;
+  --accent-hover: #0f766e;
+  --accent-alpha: rgba(13, 148, 136, 0.1);
   --danger: #ff3b30;
   --success: #34c759;
   --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 24px rgba(0, 0, 0, 0.08);
@@ -29,9 +32,9 @@
   --text-tertiary: #a1a1a6;
   --border: #38383a;
   --border-light: #2c2c2e;
-  --accent: #0a84ff;
-  --accent-hover: #409cff;
-  --accent-alpha: rgba(10, 132, 255, 0.15);
+  --accent: #11a39c;
+  --accent-hover: #14b8a6;
+  --accent-alpha: rgba(17, 163, 156, 0.15);
   --danger: #ff453a;
   --success: #30d158;
   --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 4px 24px rgba(0, 0, 0, 0.4);
@@ -64,17 +67,178 @@ body {
 }
 
 @keyframes skeleton {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* Spinner */
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+/* Micro-interaction Animations */
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.3);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes heartBeat {
+  0% {
+    transform: scale(1);
+  }
+
+  14% {
+    transform: scale(1.3);
+  }
+
+  28% {
+    transform: scale(1);
+  }
+
+  42% {
+    transform: scale(1.3);
+  }
+
+  70% {
+    transform: scale(1);
+  }
+}
+
+@keyframes wiggle {
+
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+
+  25% {
+    transform: rotate(-10deg);
+  }
+
+  75% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes bounce {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-pop {
+  animation: pop 0.3s ease-out;
+}
+
+.animate-heartBeat {
+  animation: heartBeat 0.5s ease-in-out;
+}
+
+.animate-wiggle {
+  animation: wiggle 0.3s ease-in-out;
+}
+
+.animate-bounce-once {
+  animation: bounce 0.4s ease-out;
+}
+
+/* Milestone Celebration Animations */
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-100%) rotate(0deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes badgeReveal {
+  0% {
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
+  }
+
+  50% {
+    transform: scale(1.2) rotate(10deg);
+  }
+
+  70% {
+    transform: scale(0.9) rotate(-5deg);
+  }
+
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+  }
+
+  50% {
+    box-shadow: 0 0 40px rgba(255, 215, 0, 0.9), 0 0 60px rgba(255, 215, 0, 0.4);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.animate-confetti {
+  animation: confettiFall 3s ease-out forwards;
+}
+
+.animate-badgeReveal {
+  animation: badgeReveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-glow {
+  animation: glow 1.5s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
 }
 
 /* Scrollbar */
@@ -104,32 +268,44 @@ body {
 
 /* Chat Drawer Animations */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideInFromRight {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
 }
 
 @keyframes slideInFromBottom {
-  from { 
+  from {
     opacity: 0;
     transform: translateY(8px);
   }
-  to { 
+
+  to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
 @keyframes zoomIn {
-  from { 
+  from {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.95);
   }
-  to { 
+
+  to {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
   }
@@ -158,6 +334,7 @@ body {
     opacity: 0;
     transform: scale(0.96) translateY(-6px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -167,4 +344,3 @@ body {
 .animate-zoomInNoTranslate {
   animation: zoomInNoTranslate 0.18s ease-out forwards;
 }
-

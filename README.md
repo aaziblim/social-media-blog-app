@@ -1,72 +1,178 @@
-# Spherespace
+# 🌐 Spherespace
 
-Spherespace is a real-time social platform focused on creators and communities. It combines a performant React + TypeScript frontend with a robust Django REST + Channels backend to provide instant messaging, verified creator badges, payments, and creator analytics.
+> **Where People Connect** — A real-time social platform for creators and communities
 
-**Spherespace — Where People Connect**
+Spherespace combines a blazing-fast React + TypeScript frontend with a robust Django REST + Channels backend to deliver real-time messaging, verified creator badges, payments, gamification, and creator analytics.
 
-**Key Features:**
-- **Real-time chat:** WebSocket-based messaging using Django Channels and Daphne.
-- **Verified badges & payments:** Integration-ready payment flows (Paystack / USD pricing) for verification tiers.
-- **Creator analytics:** Lightweight analytics dashboards for creators (views, likes, engagement).
-- **Social primitives:** Profiles, following, message requests, read receipts, typing indicators.
-- **Modern frontend:** Vite + React + TypeScript + TanStack Query for fast UX.
+---
 
-**Tech Stack:**
-- Backend: Django 5, Django REST Framework, Django Channels, Daphne
-- Frontend: React, TypeScript, Vite, Tailwind CSS
-- Database: SQLite/Postgres (configurable via `DATABASE_URL`)
-- Channel layer: In-memory (dev) or Redis (production)
+## 🎯 Features Overview
 
-**Project Structure (high level):**
-- `my_project/` — Django project
-- `users/` — User, profile, and chat models + APIs + WebSocket consumers
-- `blog/` — Blog app and content
-- `frontend/` — React app (Vite) in `frontend/`
+| Category | Features |
+|----------|----------|
+| **Social** | User profiles, following, posts, comments, communities |
+| **Real-time Chat** | WebSocket messaging, typing indicators, read receipts, message requests |
+| **Gamification** | 🏆 Achievement badges, 🔥 activity streaks, karma system |
+| **Creators** | Verified badges, analytics dashboard, payment integration |
+| **UI/UX** | Dark/light themes, skeleton loading, micro-interactions, responsive mobile |
 
-**Quick Start (development)**
+---
 
-Prerequisites:
+## 🏗️ Architecture
+
+```mermaid
+graph TB
+    subgraph Frontend["Frontend (React + Vite)"]
+        UI[React Components]
+        TQ[TanStack Query]
+        WS[WebSocket Hook]
+    end
+    
+    subgraph Backend["Backend (Django)"]
+        DRF[Django REST Framework]
+        CH[Django Channels]
+        DA[Daphne ASGI]
+    end
+    
+    subgraph Data["Data Layer"]
+        PG[(PostgreSQL)]
+        RD[(Redis)]
+        S3[AWS S3 / Cloudinary]
+    end
+    
+    UI --> TQ --> DRF
+    UI --> WS --> CH --> DA
+    DRF --> PG
+    CH --> RD
+    DRF --> S3
+```
+
+---
+
+## 📁 Project Structure
+
+```
+my_project/
+├── my_project/          # Django project settings
+│   ├── settings.py
+│   ├── urls.py
+│   └── asgi.py          # Channels/WebSocket routing
+├── users/               # User management
+│   ├── models.py        # Profile, Follow, Conversation, DirectMessage, UserAchievement
+│   ├── api.py           # REST endpoints
+│   └── consumers.py     # WebSocket consumers
+├── blog/                # Content management
+│   ├── models.py        # Post, Comment, Community
+│   └── api.py           # Posts, comments, communities API
+├── payments/            # Paystack integration
+│   └── api.py           # Payment flows
+└── frontend/            # React application
+    ├── src/
+    │   ├── components/  # UI components
+    │   ├── pages/       # Page components
+    │   ├── hooks/       # Custom hooks
+    │   └── api.ts       # API client
+    └── index.html
+```
+
+---
+
+## 🏆 Achievements System
+
+The platform includes a gamification layer with automatic achievement detection:
+
+```mermaid
+flowchart LR
+    A[User Action] --> B{Check Conditions}
+    B -->|Post Created| C[first_post / rising_star]
+    B -->|Received Likes| D[karma_king]
+    B -->|Daily Login| E[week_warrior]
+    B -->|Joined Community| F[community_builder]
+    B -->|Gained Followers| G[social_butterfly]
+    
+    C --> H[Award Achievement]
+    D --> H
+    E --> H
+    F --> H
+    G --> H
+    
+    H --> I[Show Celebration 🎉]
+```
+
+### Available Achievements
+
+| Achievement | Trigger | Badge |
+|-------------|---------|-------|
+| First Post | Publish 1 post | 🚀 |
+| Rising Star | Publish 10 posts | ⭐ |
+| Karma King | Reach 100 karma | 👑 |
+| Week Warrior | 7-day activity streak | 🔥 |
+| Community Builder | Join 5 communities | 🏘️ |
+| Social Butterfly | Reach 50 followers | 🦋 |
+
+### API Endpoints
+
+```bash
+# Get pending (unshown) achievements
+GET /api/achievements/pending/
+
+# Mark achievement as shown
+POST /api/achievements/mark-shown/
+{"achievement_id": "week_warrior"}
+
+# Get all earned achievements
+GET /api/achievements/
+```
+
+---
+
+## 💬 Real-time Chat
+
+```mermaid
+sequenceDiagram
+    participant U1 as User A
+    participant WS as WebSocket Server
+    participant U2 as User B
+    
+    U1->>WS: Connect /ws/chat/
+    U2->>WS: Connect /ws/chat/
+    U1->>WS: send_message {to: "userB", content: "Hey!"}
+    WS->>U2: new_message {from: "userA", content: "Hey!"}
+    U2->>WS: mark_read {message_id: "123"}
+    WS->>U1: messages_read {ids: ["123"]}
+```
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
 - Python 3.11+
-- Node 18+
-- Redis (optional, for production websocket scaling)
+- Node.js 18+
+- Redis (optional, for production WebSocket scaling)
 
-Backend
-
-1. Create & activate virtualenv:
+### Backend Setup
 
 ```bash
+# Create virtual environment
 python -m venv venv
-# Windows
-venv\\Scripts\\activate
-# macOS / Linux
-source venv/bin/activate
-```
+source venv/bin/activate  # Linux/macOS
+venv\Scripts\activate     # Windows
 
-2. Install Python deps:
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
-```
 
-3. Run migrations & create a superuser:
-
-```bash
+# Run migrations
 python manage.py migrate
+
+# Create admin user
 python manage.py createsuperuser
-```
 
-4. Run the development ASGI server (Daphne) to support WebSockets:
-
-```bash
-# Development (Daphne)
-daphne -b 127.0.0.1 -p 8000 my_project.asgi:application
-# or using manage.py runserver which will use Daphne when channels installed
+# Start server
 python manage.py runserver
 ```
 
-Frontend
-
-1. Install dependencies and start dev server:
+### Frontend Setup
 
 ```bash
 cd frontend
@@ -74,54 +180,128 @@ npm install
 npm run dev
 ```
 
-2. Open the app at the Vite dev URL (usually `http://localhost:5173`) and backend at `http://127.0.0.1:8000`.
+Open:
+- Frontend: http://localhost:5173
+- Backend API: http://127.0.0.1:8000/api/
 
-**Environment Variables (examples)**
-- `DJANGO_SECRET_KEY`
-- `DJANGO_DEBUG` (True/False)
-- `DATABASE_URL` (optional)
-- `REDIS_URL` (for channels_redis)
-- `PAYSTACK_SECRET_KEY` (payments)
+---
 
-**Important Files / Components**
-- `users/models.py` — `Profile`, `Conversation`, `DirectMessage`
-- `users/api.py` — REST endpoints for conversations, messages, requests
-- `users/consumers.py` — `ChatConsumer` for WebSocket messaging
-- `my_project/asgi.py` — ASGI routing + Channels integration
-- `frontend/src/hooks/useChatWebSocket.ts` — frontend WebSocket hook
-- `frontend/src/components/Chat.tsx` — chat UI integrated with WebSocket connection
+## ⚙️ Environment Variables
 
-**WebSocket / Real-time Notes**
-- WebSocket endpoint: `/ws/chat/?token=<jwt>`
-- Backend pushes: `new_message`, `typing`, `messages_read`, etc.
-- Frontend falls back to polling for resilience (TanStack Query polling) if WebSocket is unavailable.
+Create a `.env` file in the project root:
 
-**Deployment Tips**
-- Use `daphne` or an ASGI server + process manager (systemd, supervisord).
-- Use `channels_redis` with Redis for the `CHANNEL_LAYERS` backend in production.
-- Serve static files via CDN or `whitenoise` + proper collectstatic configuration.
-- Use HTTPS and ensure WebSocket uses `wss://` in production.
+```env
+# Django
+DJANGO_SECRET_KEY=your-secret-key
+DJANGO_DEBUG=True
 
-**Roadmap (short term)**
-- Group/DM search and message threading
-- Media message uploads (images, voice) with resumable uploads
-- Presence improvements (accurate last-seen, multi-device presence)
-- Rich reactions & message editing
-- Admin tools for verified badge management
+# Database (optional, defaults to SQLite)
+DATABASE_URL=postgres://user:pass@localhost:5432/spherespace
 
-**Contributing**
-- Fork the repo, make a feature branch, open PRs to `main`.
-- Keep changes small and add tests for backend logic where applicable.
+# Redis (for production)
+REDIS_URL=redis://127.0.0.1:6379
 
+# AWS S3 (for media storage)
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_STORAGE_BUCKET_NAME=
 
-This README is a living document — we can expand it with diagrams, API examples, and a contributor guide when you want to publish or onboard collaborators.
+# Payments
+PAYSTACK_SECRET_KEY=sk_test_xxx
+PAYSTACK_PUBLIC_KEY=pk_test_xxx
 
-## Docs
+# Email
+EMAIL_HOST_USER=your@email.com
+EMAIL_HOST_PASSWORD=app-password
+```
 
-Additional developer docs and diagrams are available in the `docs/` folder:
+---
 
-- `docs/architecture.svg` — high-level architecture diagram (frontend → ASGI/Daphne → Channels → DB/Redis).
-- `docs/websocket-sequence.svg` — sequence diagram for a WebSocket message flow.
-- `docs/api.md` — REST + WebSocket examples (curl, fetch, WebSocket snippets).
+## 📊 Scalability
 
-Open these files for diagrams and copyable API examples to help onboard contributors or flesh out API clients.
+| Component | Current | At Scale (1M+ users) |
+|-----------|---------|----------------------|
+| Database | SQLite / PostgreSQL | PostgreSQL + Read Replicas |
+| Caching | None | Redis |
+| Channel Layer | In-Memory | Redis |
+| Media Storage | Local / Cloudinary | AWS S3 + CloudFront CDN |
+| Task Queue | Sync | Celery + Redis |
+
+### Production Recommendations
+
+```python
+# settings.py - Production caching
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': os.environ.get('REDIS_URL'),
+    }
+}
+
+# Channel layers with Redis
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [os.environ.get('REDIS_URL')],
+        },
+    },
+}
+```
+
+---
+
+## 🎨 UI Features
+
+### Micro-interactions
+- **Like button**: Heartbeat animation on click
+- **Save button**: Pop bounce animation
+- **Emoji reactions**: Colored tint + label display
+
+### Skeleton Loading
+Shimmer loading states across all pages for premium feel.
+
+### Theme Support
+- 🌙 Dark mode
+- ☀️ Light mode
+- System preference detection
+
+---
+
+## 🛣️ Roadmap
+
+- [ ] Push notifications
+- [ ] Voice/video calling
+- [ ] Stories feature
+- [ ] AI content recommendations
+- [ ] Creator monetization tools
+- [ ] Mobile apps (React Native)
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repo
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+## 📚 Additional Docs
+
+See the `docs/` folder for:
+- `architecture.svg` — System architecture diagram
+- `websocket-sequence.svg` — WebSocket message flow
+- `api.md` — REST & WebSocket API examples
+
+---
+
+**Built with ❤️ using Django, React, and TypeScript**

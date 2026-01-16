@@ -129,6 +129,9 @@ class DirectMessage(models.Model):
     # Soft delete for "unsend"
     is_unsent = models.BooleanField(default=False)
     
+    # E2EE: True if content is encrypted (ciphertext + nonce in base64)
+    is_encrypted = models.BooleanField(default=False)
+    
     class Meta:
         ordering = ['created_at']
     
@@ -141,4 +144,75 @@ class DirectMessage(models.Model):
         if not self.read_at:
             self.read_at = timezone.now()
             self.save(update_fields=['read_at'])
+
+
+class UserActivity(models.Model):
+    """Track daily user activity for streak calculation"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activities')
+    date = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('user', 'date')
+        ordering = ['-date']
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.date}"
+
+
+# ============ E2EE PUBLIC KEY STORAGE ============
+
+class UserPublicKey(models.Model):
+    """
+    Stores the user's X25519 public key for E2EE chat.
+    
+    SECURITY NOTES:
+    - The private key is stored client-side only (browser IndexedDB)
+    - Server never sees or stores private keys
+    - One key pair per user (not per-conversation)
+    - Key is Base64-encoded raw public key bytes
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='e2ee_public_key')
+    key_data = models.TextField(help_text="Base64-encoded X25519 public key")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "User Public Key"
+        verbose_name_plural = "User Public Keys"
+    
+    def __str__(self):
+        return f"{self.user.username}'s public key"
+
+
+# ============ ACHIEVEMENTS / MILESTONES ============
+
+class UserAchievement(models.Model):
+    """
+    Track user achievements/milestones.
+    
+    Achievements are awarded once and stored permanently.
+    The frontend checks for pending achievements on login.
+    """
+    ACHIEVEMENT_CHOICES = [
+        ('first_post', 'First Post'),
+        ('rising_star', 'Rising Star'),
+        ('karma_king', 'Karma King'),
+        ('week_warrior', 'Week Warrior'),
+        ('community_builder', 'Community Builder'),
+        ('social_butterfly', 'Social Butterfly'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='achievements')
+    achievement_id = models.CharField(max_length=50, choices=ACHIEVEMENT_CHOICES)
+    earned_at = models.DateTimeField(auto_now_add=True)
+    shown_to_user = models.BooleanField(default=False)
+    
+    class Meta:
+        unique_together = ('user', 'achievement_id')
+        ordering = ['-earned_at']
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.achievement_id}"
+
 

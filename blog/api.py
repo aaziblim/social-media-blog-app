@@ -1,12 +1,15 @@
 from django.db import models
-from django.db.models import Count
+from django.db.models import Count, F
 from rest_framework import viewsets, permissions, decorators, status
 from rest_framework.response import Response
 from rest_framework import serializers
 from rest_framework.pagination import PageNumberPagination
-from .models import Post, Comment, Livestream, LivestreamMessage, LivestreamSignal
+from rest_framework.decorators import api_view, permission_classes
+from .models import Post, Comment, Livestream, LivestreamMessage, LivestreamSignal, Community, CommunityMembership
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.utils.text import slugify
+import math
 
 
 class AuthorSerializer(serializers.ModelSerializer):
@@ -27,6 +30,44 @@ class AuthorSerializer(serializers.ModelSerializer):
         return image.url
 
 
+class CommunitySerializer(serializers.ModelSerializer):
+    creator = AuthorSerializer(read_only=True)
+    is_member = serializers.SerializerMethodField()
+    posts_count = serializers.IntegerField(read_only=True)
+    members_count = serializers.IntegerField(read_only=True)
+    icon_url = serializers.SerializerMethodField()
+    cover_image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Community
+        fields = [
+            'id', 'name', 'slug', 'description', 'icon', 'cover_image',
+            'icon_url', 'cover_image_url', 'creator', 'is_member',
+            'posts_count', 'members_count', 'is_private', 'created_at'
+        ]
+        read_only_fields = ['id', 'slug', 'creator', 'posts_count', 'members_count', 'created_at']
+
+    def get_is_member(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.members.filter(pk=request.user.pk).exists()
+
+    def get_icon_url(self, obj):
+        if not obj.icon: return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.icon.url) if request else obj.icon.url
+
+    def get_cover_image_url(self, obj):
+        if not obj.cover_image: return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.cover_image.url) if request else obj.cover_image.url
+
+class PostCommunitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Community
+        fields = ['name', 'slug']
+
 class PostSerializer(serializers.ModelSerializer):
     author = AuthorSerializer(read_only=True)
     likes_count = serializers.IntegerField(read_only=True)
@@ -38,8 +79,15 @@ class PostSerializer(serializers.ModelSerializer):
     post_image_url = serializers.SerializerMethodField()
     post_video_url = serializers.SerializerMethodField()
     # Write-only fields for file uploads
-    post_image = serializers.ImageField(write_only=True, required=False, allow_null=True)
-    post_video = serializers.FileField(write_only=True, required=False, allow_null=True)
+    community = PostCommunitySerializer(read_only=True)
+    community_slug = serializers.SlugRelatedField(
+        slug_field='slug',
+        queryset=Community.objects.all(),
+        source='community',
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
 
     class Meta:
         model = Post
@@ -60,6 +108,9 @@ class PostSerializer(serializers.ModelSerializer):
             "comments_count",
             "user_has_liked",
             "user_has_disliked",
+            "views_count",
+            "community",
+            "community_slug",
         ]
         # Keep identifiers and derived URLs server-controlled to avoid collisions.
         read_only_fields = [
@@ -74,6 +125,8 @@ class PostSerializer(serializers.ModelSerializer):
             "user_has_disliked",
             "post_image_url",
             "post_video_url",
+            "views_count",
+            "community",
         ]
 
     def get_post_image_url(self, obj):
@@ -114,9 +167,9 @@ class PostViewSet(viewsets.ModelViewSet):
     # Use global DRF pagination defined in settings (PageNumberPagination, size 6).
 
     def get_queryset(self):
-        return (
+        queryset = (
             Post.objects.all()
-            .select_related("author", "author__profile")
+            .select_related("author", "author__profile", "community")
             .prefetch_related("likes", "dislikes")
             .annotate(
                 likes_count=Count("likes", distinct=True),
@@ -125,6 +178,12 @@ class PostViewSet(viewsets.ModelViewSet):
             )
             .order_by("-date_posted")
         )
+        
+        community_slug = self.request.query_params.get('community')
+        if community_slug:
+            queryset = queryset.filter(community__slug=community_slug)
+            
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -162,7 +221,7 @@ class PostViewSet(viewsets.ModelViewSet):
         )
 
     @decorators.action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated])
-    def like(self, request, pk=None):
+    def like(self, request, slug=None):
         post = self.get_object()
         user = request.user
         if post.likes.filter(pk=user.pk).exists():
@@ -176,7 +235,7 @@ class PostViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @decorators.action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated])
-    def dislike(self, request, pk=None):
+    def dislike(self, request, slug=None):
         post = self.get_object()
         user = request.user
         if post.dislikes.filter(pk=user.pk).exists():
@@ -189,8 +248,153 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(refreshed)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+class CommunityViewSet(viewsets.ModelViewSet):
+    serializer_class = CommunitySerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    lookup_field = 'slug'
 
-# ==================== COMMENTS ====================
+    def get_queryset(self):
+        return Community.objects.all().annotate(
+            posts_count=Count('posts', distinct=True),
+            members_count=Count('members', distinct=True)
+        )
+
+    def perform_create(self, serializer):
+        community = serializer.save(creator=self.request.user)
+        # Creator is automatically a member (admin)
+        CommunityMembership.objects.create(
+            user=self.request.user,
+            community=community,
+            role='admin'
+        )
+
+    @decorators.action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def join(self, request, slug=None):
+        community = self.get_object()
+        membership, created = CommunityMembership.objects.get_or_create(
+            user=request.user,
+            community=community
+        )
+        return Response({'status': 'joined', 'role': membership.role})
+
+    @decorators.action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def leave(self, request, slug=None):
+        community = self.get_object()
+        if community.creator == request.user:
+            return Response({'error': 'Creator cannot leave the community'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        CommunityMembership.objects.filter(user=request.user, community=community).delete()
+        return Response({'status': 'left'})
+
+
+# ==================== TRENDING ALGORITHM ====================
+
+def wilson_score(ups: int, downs: int, confidence: float = 0.95) -> float:
+    """
+    Wilson Lower Bound Confidence Interval.
+    Better than simple ratio - accounts for sample size.
+    Used by Reddit for "Best" sorting.
+    
+    Returns a score between 0 and 1, where higher = more confident the item is liked.
+    """
+    n = ups + downs
+    if n == 0:
+        return 0
+    
+    # Z-score for 95% confidence (1.96)
+    z = 1.96 if confidence == 0.95 else 1.645  # 90% fallback
+    p = ups / n
+    
+    left = p + (z * z) / (2 * n)
+    right = z * math.sqrt((p * (1 - p) + (z * z) / (4 * n)) / n)
+    under = 1 + (z * z) / n
+    
+    return (left - right) / under
+
+
+def calculate_trending_score(post, now) -> float:
+    """
+    Combined trending score using:
+    1. Wilson Lower Bound for confidence-based ranking
+    2. Hacker News-style time decay (gravity)
+    3. Engagement velocity (comments as proxy)
+    4. Views boost (logarithmic)
+    """
+    ups = getattr(post, 'likes_count', 0) or 0
+    downs = getattr(post, 'dislikes_count', 0) or 0
+    comments = getattr(post, 'comments_count', 0) or 0
+    views = post.views_count or 0
+    
+    # 1. Wilson Lower Bound for confidence
+    wilson = wilson_score(ups, downs)
+    
+    # 2. Time decay (Hacker News style with gravity=1.5)
+    age_hours = (now - post.date_posted).total_seconds() / 3600
+    time_factor = 1 / pow(age_hours + 2, 1.5)
+    
+    # 3. Engagement velocity (comments per hour as proxy)
+    velocity = (comments * 2) / max(age_hours, 1)
+    
+    # 4. Views boost (logarithmic to prevent domination)
+    views_boost = math.log10(max(views, 1) + 1)
+    
+    # Combined weighted score
+    # Wilson dominates (40%), time matters (30%), velocity (20%), views (10%)
+    return (wilson * 40) + (time_factor * 30) + (velocity * 20) + (views_boost * 10)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def trending_posts_view(request):
+    """
+    Get posts ranked by trending score.
+    Uses Wilson Lower Bound + Hacker News time decay + engagement velocity.
+    
+    Query params:
+    - limit: max posts to return (default 20, max 50)
+    """
+    limit = min(int(request.query_params.get('limit', 20)), 50)
+    now = timezone.now()
+    
+    # Get all posts with annotations
+    posts = (
+        Post.objects.all()
+        .select_related('author', 'author__profile')
+        .prefetch_related('likes', 'dislikes')
+        .annotate(
+            likes_count=Count('likes', distinct=True),
+            dislikes_count=Count('dislikes', distinct=True),
+            comments_count=Count('comments', distinct=True),
+        )
+    )
+    
+    # Calculate trending scores and sort
+    scored = [(p, calculate_trending_score(p, now)) for p in posts]
+    scored.sort(key=lambda x: x[1], reverse=True)
+    
+    # Get top trending
+    trending = [p for p, _ in scored[:limit]]
+    
+    serializer = PostSerializer(trending, many=True, context={'request': request})
+    return Response({
+        'results': serializer.data,
+        'count': len(trending),
+        'algorithm': 'wilson_hn_velocity'
+    })
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def increment_post_views(request, slug):
+    """
+    Increment view count for a post.
+    Called when a user views the post detail.
+    """
+    try:
+        Post.objects.filter(slug=slug).update(views_count=F('views_count') + 1)
+        return Response({'status': 'ok'})
+    except Exception:
+        return Response({'error': 'Post not found'}, status=status.HTTP_404_NOT_FOUND)
 
 class CommentSerializer(serializers.ModelSerializer):
     author = AuthorSerializer(read_only=True)
@@ -362,6 +566,7 @@ class LivestreamSerializer(serializers.ModelSerializer):
     thumbnail_url = serializers.SerializerMethodField()
     duration = serializers.ReadOnlyField()
     is_live = serializers.ReadOnlyField()
+    is_owner = serializers.SerializerMethodField()
     
     class Meta:
         model = Livestream
@@ -369,7 +574,7 @@ class LivestreamSerializer(serializers.ModelSerializer):
             'id', 'host', 'title', 'description', 'thumbnail_url',
             'status', 'viewer_count', 'peak_viewers', 'total_likes',
             'scheduled_at', 'started_at', 'ended_at', 'created_at',
-            'is_private', 'duration', 'is_live'
+            'is_private', 'duration', 'is_live', 'is_owner'
         ]
         read_only_fields = ['id', 'host', 'viewer_count', 'peak_viewers', 'total_likes', 'started_at', 'ended_at']
     
@@ -380,6 +585,12 @@ class LivestreamSerializer(serializers.ModelSerializer):
         if request:
             return request.build_absolute_uri(obj.thumbnail.url)
         return obj.thumbnail.url
+    
+    def get_is_owner(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.host_id == request.user.id
+        return False
 
 
 class LivestreamViewSet(viewsets.ModelViewSet):
@@ -396,6 +607,11 @@ class LivestreamViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = Livestream.objects.select_related('host', 'host__profile')
+        
+        # Filter by mine (user's own streams)
+        mine_filter = self.request.query_params.get('mine')
+        if mine_filter == 'true' and self.request.user.is_authenticated:
+            return queryset.filter(host=self.request.user).order_by('-created_at')
         
         # Filter by status
         status_filter = self.request.query_params.get('status')
@@ -451,6 +667,16 @@ class LivestreamViewSet(viewsets.ModelViewSet):
         
         stream.end()
         return Response(self.get_serializer(stream).data)
+    
+    @decorators.action(detail=True, methods=['delete'], permission_classes=[permissions.IsAuthenticated])
+    def delete_stream(self, request, id=None):
+        """Delete a stream - only by host"""
+        stream = self.get_object()
+        if stream.host != request.user:
+            return Response({'error': 'Only the host can delete the stream'}, status=status.HTTP_403_FORBIDDEN)
+        
+        stream.delete()
+        return Response({'detail': 'Stream deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
     
     @decorators.action(detail=True, methods=['post'])
     def join(self, request, id=None):

@@ -7,6 +7,21 @@ export interface Author {
   is_verified?: boolean
 }
 
+export interface Community {
+  id: number
+  name: string
+  slug: string
+  description: string
+  icon_url?: string | null
+  cover_image_url?: string | null
+  creator: Author
+  is_member: boolean
+  posts_count: number
+  members_count: number
+  is_private: boolean
+  created_at: string
+}
+
 export interface Post {
   id: number
   public_id: string
@@ -23,6 +38,10 @@ export interface Post {
   user_has_liked: boolean
   user_has_disliked: boolean
   views_count?: number
+  community?: {
+    name: string
+    slug: string
+  } | null
 }
 
 export interface Paginated<T> {
@@ -50,6 +69,7 @@ export interface PostFormData {
   content: string
   post_image?: File | null
   post_video?: File | null
+  community_slug?: string | null
 }
 
 export interface Comment {
@@ -144,6 +164,7 @@ export interface Message {
   shared_post_id?: string | null
   reactions?: { emoji: string; user_id: number }[]
   is_unsent?: boolean
+  is_encrypted?: boolean  // E2EE: true if content is encrypted ciphertext
 }
 
 export interface Conversation {
