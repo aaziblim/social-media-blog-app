@@ -130,10 +130,10 @@ function QuickNav() {
 
   const allNavItems = [
     { icon: '🏠', label: 'Home', href: '/', isActive: currentPath === '/' && !searchParams.get('tab'), essential: true },
+    { icon: '📺', label: 'Live', href: '/live', isActive: currentPath === '/live' || currentPath.startsWith('/live/'), essential: true },
+    { icon: '🔍', label: 'Explore', href: '/explore', isActive: currentPath === '/explore', essential: true },
     { icon: '🔥', label: 'Hot', href: '/?tab=hot', isActive: currentTab === 'hot', essential: false },
     { icon: '✨', label: 'Fresh', href: '/?tab=fresh', isActive: currentTab === 'fresh', essential: false },
-    { icon: '📺', label: 'Live', href: '/live', isActive: currentPath === '/live' || currentPath.startsWith('/live/'), essential: false },
-    { icon: '🔍', label: 'Explore', href: '/explore', isActive: currentPath === '/explore', essential: false },
     { icon: '📝', label: 'Create Post', href: '/posts/new', isActive: currentPath === '/posts/new', essential: false },
   ]
 

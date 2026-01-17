@@ -79,150 +79,154 @@ export default function MobileMenuSheet({ open, onClose }: MobileMenuSheetProps)
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm md:hidden animate-fadeIn"
+        className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm lg:hidden animate-fadeIn"
         onClick={onClose}
       />
 
       {/* Sheet */}
       <div
         ref={sheetRef}
-        className="fixed bottom-0 left-0 right-0 z-[70] md:hidden rounded-t-2xl overflow-hidden animate-slideUp"
+        className="fixed bottom-0 left-0 right-0 z-[70] lg:hidden rounded-t-2xl overflow-hidden animate-slideUp"
         style={{
           backgroundColor: 'var(--bg-primary)',
+          maxHeight: '85vh',
         }}
       >
         {/* Handle */}
-        <div className="flex justify-center pt-3 pb-2">
+        <div className="flex justify-center pt-3 pb-2 sticky top-0 z-10" style={{ backgroundColor: 'var(--bg-primary)' }}>
           <div className="w-9 h-1 rounded-full" style={{ backgroundColor: 'var(--bg-tertiary)' }} />
         </div>
 
-        {/* User Section (if logged in) */}
-        {user && (
-          <div className="px-5 pb-4">
-            <button
-              onClick={() => handleNavigate(`/user/${user.username}`)}
-              className="w-full flex items-center gap-3 p-3 rounded-2xl transition-colors active:bg-[var(--bg-tertiary)]"
-              style={{ backgroundColor: 'var(--bg-secondary)' }}
-            >
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-semibold overflow-hidden"
-                style={{ backgroundColor: 'var(--accent)' }}
-              >
-                {user.profile?.image ? (
-                  <img src={user.profile.image} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  user.username.charAt(0).toUpperCase()
-                )}
-              </div>
-              <div className="flex-1 text-left">
-                <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                  {user.first_name || user.username}
-                </p>
-                <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>View your profile</p>
-              </div>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5" style={{ color: 'var(--text-tertiary)' }}>
-                <path d="M9 18l6-6-6-6" />
-              </svg>
-            </button>
-          </div>
-        )}
+        {/* Scrollable Content */}
+        <div className="overflow-y-auto" style={{ maxHeight: 'calc(85vh - 28px)' }}>
 
-        {/* Menu Items */}
-        <div className="px-5 pb-6">
-          {/* Primary Actions */}
-          <div className="rounded-2xl overflow-hidden mb-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-            <MenuItem
-              icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>}
-              label="Home"
-              isActive={location.pathname === '/'}
-              onClick={() => handleNavigate('/')}
-            />
-            <MenuItem
-              icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>}
-              label="Explore"
-              isActive={location.pathname === '/explore'}
-              onClick={() => handleNavigate('/explore')}
-            />
-            <MenuItem
-              icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" /></svg>}
-              label="Live"
-              isActive={location.pathname.startsWith('/live')}
-              onClick={() => handleNavigate('/live')}
-              badge="LIVE"
-              badgeColor="#FF3B30"
-            />
-          </div>
-
-          {/* Secondary Actions */}
-          <div className="rounded-2xl overflow-hidden mb-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-            {user && (
-              <>
-                <MenuItem
-                  icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg>}
-                  label="Saved Posts"
-                  onClick={() => handleNavigate('/?tab=saved')}
-                />
-                <MenuItem
-                  icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path d="M3 3v18h18" /><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" /></svg>}
-                  label="Creator Dashboard"
-                  onClick={() => handleNavigate('/dashboard')}
-                />
-                <MenuItem
-                  icon={<svg viewBox="0 0 22 22" className="w-5 h-5"><path fill="#1DA1F2" d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681.132-.637.075-1.299-.165-1.903.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" /></svg>}
-                  label="Get Verified"
-                  onClick={() => handleNavigate('/get-verified')}
-                  badge="NEW"
-                  badgeColor="#1DA1F2"
-                />
-              </>
-            )}
-            <MenuItem
-              icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>}
-              label="Settings"
-              onClick={() => handleNavigate('/settings')}
-            />
-            <MenuItem
-              icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>}
-              label="About"
-              onClick={() => handleNavigate('/about')}
-              isLast
-            />
-          </div>
-
-          {/* Communities Section */}
-          {user && <CommunitiesSection onNavigate={handleNavigate} currentPath={location.pathname} />}
-
-          {/* Auth Actions */}
-          {user ? (
-            <button
-              onClick={handleLogout}
-              className="w-full py-3.5 rounded-2xl text-center font-medium transition-colors active:opacity-80"
-              style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--danger)' }}
-            >
-              Sign Out
-            </button>
-          ) : (
-            <div className="flex gap-3">
+          {/* User Section (if logged in) */}
+          {user && (
+            <div className="px-5 pb-4">
               <button
-                onClick={() => handleNavigate('/login')}
-                className="flex-1 py-3.5 rounded-2xl text-center font-medium transition-colors active:opacity-80"
-                style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                onClick={() => handleNavigate(`/user/${user.username}`)}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl transition-colors active:bg-[var(--bg-tertiary)]"
+                style={{ backgroundColor: 'var(--bg-secondary)' }}
               >
-                Sign In
-              </button>
-              <button
-                onClick={() => handleNavigate('/register')}
-                className="flex-1 py-3.5 rounded-2xl text-center font-medium text-white transition-colors active:opacity-80"
-                style={{ backgroundColor: 'var(--accent)' }}
-              >
-                Sign Up
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-semibold overflow-hidden"
+                  style={{ backgroundColor: 'var(--accent)' }}
+                >
+                  {user.profile?.image ? (
+                    <img src={user.profile.image} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    user.username.charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    {user.first_name || user.username}
+                  </p>
+                  <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>View your profile</p>
+                </div>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5" style={{ color: 'var(--text-tertiary)' }}>
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
               </button>
             </div>
           )}
-        </div>
-      </div>
 
-      <style>{`
+          {/* Menu Items */}
+          <div className="px-5 pb-6">
+            {/* Primary Actions */}
+            <div className="rounded-2xl overflow-hidden mb-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+              <MenuItem
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>}
+                label="Home"
+                isActive={location.pathname === '/'}
+                onClick={() => handleNavigate('/')}
+              />
+              <MenuItem
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>}
+                label="Explore"
+                isActive={location.pathname === '/explore'}
+                onClick={() => handleNavigate('/explore')}
+              />
+              <MenuItem
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" /></svg>}
+                label="Live"
+                isActive={location.pathname.startsWith('/live')}
+                onClick={() => handleNavigate('/live')}
+                badge="LIVE"
+                badgeColor="#FF3B30"
+              />
+            </div>
+
+            {/* Secondary Actions */}
+            <div className="rounded-2xl overflow-hidden mb-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+              {user && (
+                <>
+                  <MenuItem
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg>}
+                    label="Saved Posts"
+                    onClick={() => handleNavigate('/?tab=saved')}
+                  />
+                  <MenuItem
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path d="M3 3v18h18" /><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" /></svg>}
+                    label="Creator Dashboard"
+                    onClick={() => handleNavigate('/dashboard')}
+                  />
+                  <MenuItem
+                    icon={<svg viewBox="0 0 22 22" className="w-5 h-5"><path fill="#1DA1F2" d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681.132-.637.075-1.299-.165-1.903.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" /></svg>}
+                    label="Get Verified"
+                    onClick={() => handleNavigate('/get-verified')}
+                    badge="NEW"
+                    badgeColor="#1DA1F2"
+                  />
+                </>
+              )}
+              <MenuItem
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>}
+                label="Settings"
+                onClick={() => handleNavigate('/settings')}
+              />
+              <MenuItem
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>}
+                label="About"
+                onClick={() => handleNavigate('/about')}
+                isLast
+              />
+            </div>
+
+            {/* Communities Section */}
+            {user && <CommunitiesSection onNavigate={handleNavigate} currentPath={location.pathname} />}
+
+            {/* Auth Actions */}
+            {user ? (
+              <button
+                onClick={handleLogout}
+                className="w-full py-3.5 rounded-2xl text-center font-medium transition-colors active:opacity-80"
+                style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--danger)' }}
+              >
+                Sign Out
+              </button>
+            ) : (
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleNavigate('/login')}
+                  className="flex-1 py-3.5 rounded-2xl text-center font-medium transition-colors active:opacity-80"
+                  style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => handleNavigate('/register')}
+                  className="flex-1 py-3.5 rounded-2xl text-center font-medium text-white transition-colors active:opacity-80"
+                  style={{ backgroundColor: 'var(--accent)' }}
+                >
+                  Sign Up
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <style>{`
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
@@ -234,6 +238,7 @@ export default function MobileMenuSheet({ open, onClose }: MobileMenuSheetProps)
         .animate-fadeIn { animation: fadeIn 0.2s ease-out; }
         .animate-slideUp { animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
       `}</style>
+      </div>
     </>
   )
 }

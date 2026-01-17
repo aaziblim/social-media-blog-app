@@ -10,7 +10,7 @@ export default function MainLayout() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-secondary)' }}>
       <Navbar />
-      <div className="pt-16 pb-20 md:pb-8">
+      <div className="pt-16 pb-20 lg:pb-8">
         <div className="max-w-7xl mx-auto px-4 flex gap-6">
           {/* Left Sidebar - Desktop only */}
           <LeftSidebar />
@@ -57,7 +57,7 @@ function MobileNav() {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden border-t" style={{
+      <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden border-t" style={{
         backgroundColor: 'var(--bg-primary)',
         borderColor: 'var(--border)'
       }}>

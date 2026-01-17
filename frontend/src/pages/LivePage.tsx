@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchLivestreams, fetchMyStreams, createLivestream, goLive, deleteStream, type Livestream } from '../api'
 import { useAuth } from '../AuthContext'
+import { ConfirmationModal } from '../components/ConfirmationModal'
 
 function formatViewers(count: number): string {
   if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`
@@ -619,49 +620,16 @@ export default function LivePage() {
 
       {/* Delete Confirmation Modal */}
       {deleteTarget && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          onClick={() => setDeleteTarget(null)}
-        >
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div
-            className="relative w-full max-w-sm rounded-3xl p-6 text-center animate-zoomIn"
-            style={{ backgroundColor: 'var(--bg-primary)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div
-              className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-              style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth={1.5} className="w-8 h-8">
-                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-              Delete this stream?
-            </h3>
-            <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-              "{deleteTarget.title}" will be permanently removed.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDeleteTarget(null)}
-                className="flex-1 py-3 rounded-xl font-medium transition-colors"
-                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => deleteMutation.mutate(deleteTarget.id)}
-                disabled={deleteMutation.isPending}
-                className="flex-1 py-3 rounded-xl font-medium text-white transition-all disabled:opacity-50"
-                style={{ backgroundColor: '#ef4444' }}
-              >
-                {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmationModal
+          isOpen={!!deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
+          title="Delete this stream?"
+          description={`"${deleteTarget.title}" will be permanently removed.`}
+          confirmText="Delete"
+          isDestructive={true}
+          isLoading={deleteMutation.isPending}
+        />
       )}
     </div>
   )

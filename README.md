@@ -14,7 +14,8 @@ Spherespace combines a blazing-fast React + TypeScript frontend with a robust Dj
 | **Real-time Chat** | WebSocket messaging, typing indicators, read receipts, message requests |
 | **Gamification** | 🏆 Achievement badges, 🔥 activity streaks, karma system |
 | **Creators** | Verified badges, analytics dashboard, payment integration |
-| **UI/UX** | Dark/light themes, skeleton loading, micro-interactions, responsive mobile |
+| **Live Streaming** | 📹 Real-time broadcasting, chat overlay, floating hearts, host controls |
+| **UI/UX** | Dark/light themes, skeleton loading, micro-interactions, glassmorphism |
 
 ---
 
@@ -230,6 +231,13 @@ POST /api/conversations/{id}/messages/
 # Achievements
 GET  /api/achievements/
 GET  /api/achievements/pending/
+
+# Livestreams
+GET  /api/streams/
+POST /api/streams/              # Create stream
+POST /api/streams/{id}/go_live/ # Start broadcasting
+POST /api/streams/{id}/end_stream/
+DELETE /api/streams/{id}/delete_stream/
 ```
 
 ## ⚙️ Environment Variables
@@ -311,6 +319,11 @@ Shimmer loading states across all pages for premium feel.
 - 🌙 Dark mode
 - ☀️ Light mode
 - System preference detection
+
+### Live Experience
+- **Glassmorphism**: Premium transparent overlays for stream controls
+- **Custom Modals**: Apple-style confirmation dialogs for critical actions
+- **Interactive**: Real-time hearts and chat overlay
 
 ---
 

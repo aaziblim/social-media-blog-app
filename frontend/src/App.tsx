@@ -9,13 +9,13 @@ import ProfilePage from './pages/ProfilePage'
 import UserProfilePage from './pages/UserProfilePage'
 import ExplorePage from './pages/ExplorePage'
 import LivePage from './pages/LivePage'
-import StreamViewerPage from './pages/StreamViewerPage'
 import GetVerifiedPage from './pages/GetVerifiedPage'
 import CheckoutPage from './pages/CheckoutPage'
 import CreatorDashboardPage from './pages/CreatorDashboardPage'
 import CommunityPage from './pages/CommunityPage'
 import ExploreCommunitiesPage from './pages/ExploreCommunitiesPage'
 import CreateCommunityPage from './pages/CreateCommunityPage'
+import StreamViewerPage from './pages/StreamViewerPage'
 
 function App() {
   return (
