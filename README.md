@@ -183,8 +183,54 @@ npm run dev
 Open:
 - Frontend: http://localhost:5173
 - Backend API: http://127.0.0.1:8000/api/
+- **API Docs**: http://127.0.0.1:8000/api/docs/
 
 ---
+
+## 📖 API Documentation
+
+The Spherespace API includes interactive documentation powered by **OpenAPI/Swagger**.
+
+| URL | Description |
+|-----|-------------|
+| `/api/docs/` | **Swagger UI** — Interactive API documentation |
+| `/api/redoc/` | **ReDoc** — Alternative documentation view |
+| `/api/schema/` | Raw OpenAPI JSON schema |
+| `/api/` | DRF Browsable API |
+
+### Using the API Docs
+
+1. **Explore endpoints** — Browse all available API routes organized by category
+2. **Try it out** — Test endpoints directly in the browser
+3. **View schemas** — See request/response formats for each endpoint
+4. **Authentication** — Use the "Authorize" button to add session credentials
+
+### Key API Endpoints
+
+```bash
+# Authentication
+POST /api/auth/login/
+POST /api/auth/register/
+POST /api/auth/logout/
+GET  /api/auth/user/
+
+# Posts & Content
+GET  /api/posts/
+POST /api/posts/
+GET  /api/posts/{slug}/
+
+# Communities
+GET  /api/communities/
+POST /api/communities/{slug}/join/
+
+# Messaging
+GET  /api/conversations/
+POST /api/conversations/{id}/messages/
+
+# Achievements
+GET  /api/achievements/
+GET  /api/achievements/pending/
+```
 
 ## ⚙️ Environment Variables
 

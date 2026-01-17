@@ -24,7 +24,7 @@ class Follow(models.Model):
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    image = models.ImageField(default='https://res.cloudinary.com/dacomxwpr/image/upload/v1747636912/default_i7zros.jpg', upload_to='profile_pics')
+    image = models.ImageField(default='default.png', upload_to='profile_pics')
     bio = models.TextField(blank=True, default='')
     last_seen = models.DateTimeField(auto_now=True)
 

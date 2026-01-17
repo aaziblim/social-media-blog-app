@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'crispy_tailwind',
     'rest_framework',
+    'drf_spectacular',
     'users.apps.UsersConfig',
     'blog.apps.BlogConfig',
     'django.contrib.admin',
@@ -307,6 +308,14 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 6,
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Spherespace API',
+    'DESCRIPTION': 'Where People Connect — A modern social platform for communities and conversations',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }
 
 
@@ -347,7 +356,7 @@ def create_default_site():
                 id=settings.SITE_ID,
                 defaults={
                     'domain': 'my-project-latest.onrender.com',
-                    'name': 'My Project'
+                    'name': 'Spherespace'
                 }
             )
         except (ProgrammingError, OperationalError):

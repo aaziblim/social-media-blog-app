@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import path, include
+from django.views.generic import RedirectView
 from users import views as user_views
 from users import api as users_api
 from django.conf import settings
@@ -11,6 +12,7 @@ from payments import api as payments_api
 from rest_framework.routers import DefaultRouter
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.http import JsonResponse
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 
 from django.contrib.sites.models import Site
@@ -19,7 +21,7 @@ from django.db import IntegrityError
 try:
     site, created = Site.objects.get_or_create(id=1)
     site.domain = 'my-project-latest.onrender.com'  # Replace with your actual Render domain
-    site.name = 'My Project'  # Can be any name
+    site.name = 'Spherespace'
     site.save()
 except IntegrityError as e:
     print("Site already exists and couldn't be updated:", e)
@@ -85,7 +87,11 @@ urlpatterns = [
     path('api/payments/history/', payments_api.payment_history, name='api-payment-history'),
     path('api/payments/webhook/', payments_api.paystack_webhook, name='api-paystack-webhook'),
     path('api/', include(router.urls)),
-    path('', include('blog.urls')),  # This will route "/" and "/about/" as defined in blog.urls.
+    # API Documentation
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    path('', RedirectView.as_view(url='/api/docs/', permanent=False), name='home'),  # Redirect to Swagger docs
     path('accounts/', include('allauth.urls'))
 ]
 
