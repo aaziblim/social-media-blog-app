@@ -1,5 +1,5 @@
 import { Routes, Route } from 'react-router-dom'
-import Layout from './components/Layout'
+import MainLayout from './components/MainLayout'
 import HomePage from './pages/HomePage'
 import PostDetailPage from './pages/PostDetailPage'
 import PostFormPage from './pages/PostFormPage'
@@ -20,7 +20,7 @@ import CreateCommunityPage from './pages/CreateCommunityPage'
 function App() {
   return (
     <Routes>
-      <Route element={<Layout />}>
+      <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/posts/:slug" element={<PostDetailPage />} />
         <Route path="/posts/new" element={<PostFormPage />} />
