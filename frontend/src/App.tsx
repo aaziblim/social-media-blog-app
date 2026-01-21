@@ -16,6 +16,7 @@ import CommunityPage from './pages/CommunityPage'
 import ExploreCommunitiesPage from './pages/ExploreCommunitiesPage'
 import CreateCommunityPage from './pages/CreateCommunityPage'
 import StreamViewerPage from './pages/StreamViewerPage'
+import SpheresPage from './pages/SpheresPage'
 
 function App() {
   return (
@@ -39,6 +40,8 @@ function App() {
         <Route path="/communities/discover" element={<ExploreCommunitiesPage />} />
         <Route path="/communities/new" element={<CreateCommunityPage />} />
       </Route>
+      {/* Spheres (Nebula) Route - Outside MainLayout for Fullscreen Immersion */}
+      <Route path="/spheres/:slug" element={<SpheresPage />} />
     </Routes>
   )
 }

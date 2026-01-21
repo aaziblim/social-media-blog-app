@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='post',
             name='slug',
-            field=models.SlugField(blank=True, max_length=140, null=True),
+            field=models.SlugField(blank=True, max_length=140, null=True, db_index=False),
         ),
         migrations.RunPython(generate_slugs, migrations.RunPython.noop),
         # Enforce constraints after data is populated.

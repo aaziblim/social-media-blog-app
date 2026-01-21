@@ -1,0 +1,59 @@
+# ============================================================================
+# Docker Compose - Development Overrides
+# ============================================================================
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# ============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Backend - Development Mode
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount source code for hot-reloading
+      - .:/app
+      # Prevent overwriting installed packages
+      - /app/venv
+    environment:
+      - DEBUG=True
+      - DJANGO_SETTINGS_MODULE=my_project.settings
+    # Use Django's development server instead of Gunicorn
+    command: python manage.py runserver 0.0.0.0:8000
+
+  # ---------------------------------------------------------------------------
+  # Frontend - Development Mode (Vite Dev Server)
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "5173:5173"
+    volumes:
+      # Mount source code for hot-reloading
+      - ./frontend:/app
+      # Prevent overwriting node_modules
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm run dev -- --host 0.0.0.0
+
+  # ---------------------------------------------------------------------------
+  # Database - Exposed for local tools
+  # ---------------------------------------------------------------------------
+  db:
+    ports:
+      - "5433:5432" # Use 5433 to avoid conflict with local PostgreSQL
+
+  # ---------------------------------------------------------------------------
+  # Redis - Exposed for local tools
+  # ---------------------------------------------------------------------------
+  redis:
+    ports:
+      - "6380:6379" # Use 6380 to avoid conflict with local Redis

@@ -270,3 +270,112 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return count
         except Conversation.DoesNotExist:
             return 0
+
+class SpheresConsumer(AsyncWebsocketConsumer):
+    """
+    WebSocket consumer for 'Spheres' (The Nebula) audio spaces.
+    Handles real-time syncing of orb positions, physics, and talking state.
+    """
+
+    async def connect(self):
+        self.user = self.scope['user']
+        if not self.user.is_authenticated:
+            await self.close()
+            return
+
+        self.slug = self.scope['url_route']['kwargs']['slug']
+        self.room_group_name = f'sphere_{self.slug}'
+
+        # Join room group
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+
+        await self.accept()
+
+        # Broadcast join event
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'user_joined',
+                'user': {
+                    'id': self.user.id,
+                    'username': self.user.username,
+                    'image': self.user.profile.image.url if hasattr(self.user, 'profile') and self.user.profile.image else None
+                }
+            }
+        )
+
+    async def disconnect(self, close_code):
+        # Leave room group
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+        
+        # Broadcast leave event
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'user_left',
+                'user_id': self.user.id
+            }
+        )
+
+    async def receive(self, text_data):
+        data = json.loads(text_data)
+        message_type = data.get('type')
+
+        # Directly relay physics updates to the group (high frequency)
+        if message_type == 'orb_update':
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'orb_update',
+                    'orb': data.get('orb'),
+                    'sender_channel_name': self.channel_name 
+                }
+            )
+        elif message_type == 'emote_burst':
+             await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'emote_burst',
+                    'user_id': self.user.id,
+                    'emote': data.get('emote', '❤️'),
+                    'sender_channel_name': self.channel_name
+                }
+            )
+
+    # Handlers
+    async def user_joined(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'user_joined',
+            'user': event['user']
+        }))
+
+    async def user_left(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'user_left',
+            'user_id': event['user_id']
+        }))
+
+    async def orb_update(self, event):
+        # Don't send back to self to save bandwidth/latency if we wanted, 
+        # but for simple authoritative sync, echoing is fine or filtering.
+        # Here we filter out self to prevent jitter/loops if client predicts physics.
+        if event.get('sender_channel_name') == self.channel_name:
+            return
+
+        await self.send(text_data=json.dumps({
+            'type': 'orb_update',
+            'orb': event['orb']
+        }))
+
+    async def emote_burst(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'emote_burst',
+            'user_id': event['user_id'],
+            'emote': event['emote']
+        }))

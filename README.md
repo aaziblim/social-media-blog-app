@@ -147,12 +147,50 @@ sequenceDiagram
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Python 3.11+
-- Node.js 18+
-- Redis (optional, for production WebSocket scaling)
+### Option 1: Docker (Recommended)
 
-### Backend Setup
+The easiest way to run the full stack locally.
+
+**Run Everything in Docker:**
+```bash
+# Development mode (with backend hot-reload)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+
+# Production mode (full simulation)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+**Mixed Mode (Best for Development):**
+*Run backend in Docker + frontend locally for fastest React hot-reloading.*
+
+1. **Terminal 1 (Backend):**
+   ```bash
+   docker compose up --build
+   ```
+2. **Terminal 2 (Frontend):**
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+
+**Services:**
+| Service | Dev URL | Local Port | Host Port | Description |
+|---------|---------|------------|-----------|-------------|
+| Frontend | http://localhost:5173 | 5173 | 5173 | React + Vite (Mixed Mode) |
+| Frontend | http://localhost | 80 | 80 | Nginx Production Build |
+| Backend | http://localhost:8000 | 8000 | 8000 | Django REST API (Gunicorn) |
+| Database | localhost:5432 | 5432 | 5433 | PostgreSQL |
+| Redis | localhost:6379 | 6379 | 6380 | Caching & WebSockets |
+
+### Option 2: Manual Setup
+
+#### Prerequisites
+- Python 3.12+
+- Node.js 20+
+- PostgreSQL (optional, SQLite default)
+- Redis (optional, for WebSocket scaling)
+
+#### Backend Setup
 
 ```bash
 # Create virtual environment
@@ -173,7 +211,7 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-### Frontend Setup
+#### Frontend Setup
 
 ```bash
 cd frontend
@@ -181,10 +219,10 @@ npm install
 npm run dev
 ```
 
-Open:
+**Access:**
 - Frontend: http://localhost:5173
 - Backend API: http://127.0.0.1:8000/api/
-- **API Docs**: http://127.0.0.1:8000/api/docs/
+- API Docs: http://127.0.0.1:8000/api/docs/
 
 ---
 
@@ -335,6 +373,26 @@ Shimmer loading states across all pages for premium feel.
 - [ ] AI content recommendations
 - [ ] Creator monetization tools
 - [ ] Mobile apps (React Native)
+
+---
+
+## 🔄 CI/CD & DevOps
+
+This project uses **GitHub Actions** for robust automated testing and deployment.
+
+### 🛠️ Workflows
+| Workflow | Trigger | Description |
+|----------|---------|-------------|
+| **CI Pipeline** | `push`, `pull_request` | Runs backend tests (pytest), frontend tests, lints, and builds Docker images. |
+| **CodeQL Security** | `push`, `schedule` | Advanced security scanning for Python and Javascript vulnerabilities. |
+| **Release** | `tag` (v*) | Automatically builds production Docker images, pushes to DockerHub, and creates a GitHub Release. |
+| **Dependabot** | `daily` | Automatically checks and creates PRs for outdated pip and npm dependencies. |
+
+### 🐳 Docker Architecture
+* **Multi-stage builds** for optimized image sizes (Backend < 200MB).
+* **Non-root users** for security.
+* **Health checks** enabled for all services.
+* **Docker Compose Watch** configured for backend hot-reloading in dev.
 
 ---
 

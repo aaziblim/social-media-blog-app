@@ -1,0 +1,27 @@
+# =============================================================================
+# CODEOWNERS
+# =============================================================================
+# Define code ownership for automatic review requests
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# =============================================================================
+
+# Default owners for everything in the repo
+*                       @arzakaria
+
+# Frontend
+/frontend/              @arzakaria
+
+# Backend / API
+/blog/                  @arzakaria
+/users/                 @arzakaria
+/payments/              @arzakaria
+/my_project/            @arzakaria
+
+# Infrastructure / DevOps
+Dockerfile*             @arzakaria
+docker-compose*.yml     @arzakaria
+/.github/               @arzakaria
+
+# Documentation
+*.md                    @arzakaria
+/docs/                  @arzakaria

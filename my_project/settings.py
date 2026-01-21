@@ -220,7 +220,7 @@ if os.environ.get('DJANGO_ENV') != 'production':
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'blog/static']
-MEDIA_URL = os.environ.get("media_url")  #'/media/'                            
+MEDIA_URL = os.environ.get("media_url", '/media/')                            
 
  #'/media/' 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -364,8 +364,10 @@ def create_default_site():
             pass
 
 # Try to create the site when Django initializes
-try:
-    create_default_site()
-except:
-    # If there's any error, we'll handle it gracefully
-    pass
+# NOTE: Commented out for Docker - this runs before migrations
+# The site will be created by the entrypoint script after migrations
+# try:
+#     create_default_site()
+# except:
+#     # If there's any error, we'll handle it gracefully
+#     pass

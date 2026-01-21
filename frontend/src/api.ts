@@ -138,6 +138,7 @@ export interface UserProfile {
   followers_count?: number
   following_count?: number
   is_following?: boolean
+  is_verified?: boolean
   posts?: Post[]
 }
 

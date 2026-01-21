@@ -137,6 +137,19 @@ export default function CommunityPage() {
                             >
                                 <span className="text-xl">⊕</span>
                             </Link>
+
+                            {/* Nebula Entry Button */}
+                            <Link
+                                to={`/spheres/${community.slug}`}
+                                className="px-4 py-2 rounded-xl text-sm font-bold text-white transition-all shadow-lg hover:scale-105 active:scale-95 flex items-center gap-2"
+                                style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #9333ea 100%)' }}
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />
+                                </svg>
+                                Enter Sphere
+                            </Link>
                         </div>
                     </div>
 

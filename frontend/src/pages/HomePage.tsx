@@ -5,6 +5,7 @@ import { fetchPosts, likePost, dislikePost } from '../api'
 import { useAuth } from '../AuthContext'
 
 import PostCard, { getSavedPosts, getHotScore, getForYouScore } from '../components/PostCard'
+import ActiveStreamsCarousel from '../components/ActiveStreamsCarousel'
 import type { Paginated, Post } from '../types'
 
 type FilterTab = 'foryou' | 'fresh' | 'hot' | 'saved'
@@ -149,6 +150,9 @@ export default function HomePage() {
 
   return (
     <div className="w-full">
+      {/* Active Streams - Stories Style */}
+      <ActiveStreamsCarousel />
+
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4 py-3 px-4 rounded-2xl transition-all" style={{ backgroundColor: 'var(--bg-primary)', boxShadow: 'var(--card-shadow)' }}>
           <div className="flex items-center gap-3">

@@ -61,7 +61,7 @@ export default function UserProfilePage() {
 
   const isOwnProfile = currentUser?.username === username
   const isCurrentlyFollowing = username ? isFollowing(username) : false
-  
+
   // Check verification - from API or localStorage if viewing own profile
   const isProfileVerified = profile.is_verified || (isOwnProfile && (() => {
     try {
@@ -81,14 +81,14 @@ export default function UserProfilePage() {
           <div className="flex flex-col sm:flex-row sm:items-start gap-4 mb-5">
             {/* Avatar */}
             <div className="flex items-center gap-4 sm:block">
-              <div 
+              <div
                 className="w-20 h-20 sm:w-20 sm:h-20 rounded-full overflow-hidden flex-shrink-0"
                 style={{ backgroundColor: 'var(--bg-tertiary)' }}
               >
                 {profile.profile_image ? (
                   <img src={profile.profile_image} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <div 
+                  <div
                     className="w-full h-full flex items-center justify-center text-white text-2xl font-semibold"
                     style={{ backgroundColor: 'var(--accent)' }}
                   >
@@ -96,7 +96,7 @@ export default function UserProfilePage() {
                   </div>
                 )}
               </div>
-              
+
               {/* Name - Shows next to avatar on mobile */}
               <div className="sm:hidden">
                 <h1 className="text-xl font-bold flex items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
@@ -119,11 +119,11 @@ export default function UserProfilePage() {
                 </div>
 
                 {isOwnProfile ? (
-                  <Link 
-                    to="/profile" 
+                  <Link
+                    to="/profile"
                     className="px-4 py-2 text-sm font-medium rounded-full border transition-colors hover:bg-[var(--bg-tertiary)]"
-                    style={{ 
-                      borderColor: 'var(--border)', 
+                    style={{
+                      borderColor: 'var(--border)',
                       color: 'var(--text-primary)',
                       backgroundColor: 'transparent'
                     }}
@@ -132,9 +132,9 @@ export default function UserProfilePage() {
                   </Link>
                 ) : currentUser ? (
                   <div className="flex items-center gap-2">
-                    <MessageButton 
+                    <MessageButton
                       targetUser={{
-                        id: profile.id,
+                        id: profile.id ?? 0,
                         username: profile.username,
                         first_name: profile.first_name,
                         profile_image: profile.profile_image,
@@ -142,11 +142,11 @@ export default function UserProfilePage() {
                       isFollowing={isCurrentlyFollowing}
                       onOpenChat={() => setChatOpen(true)}
                     />
-                    <button 
+                    <button
                       onClick={() => username && toggleFollow(username)}
                       disabled={followLoading}
                       className="px-5 py-2 text-sm font-medium rounded-full transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
-                      style={{ 
+                      style={{
                         backgroundColor: isCurrentlyFollowing ? 'var(--bg-tertiary)' : 'var(--accent)',
                         color: isCurrentlyFollowing ? 'var(--text-primary)' : 'white'
                       }}
@@ -158,15 +158,15 @@ export default function UserProfilePage() {
               </div>
             </div>
           </div>
-          
+
           {/* Action Buttons - Mobile (full width, clean) */}
           <div className="sm:hidden mb-5">
             {isOwnProfile ? (
-              <Link 
-                to="/profile" 
+              <Link
+                to="/profile"
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl border transition-colors active:scale-[0.98]"
-                style={{ 
-                  borderColor: 'var(--border)', 
+                style={{
+                  borderColor: 'var(--border)',
                   color: 'var(--text-primary)',
                   backgroundColor: 'var(--bg-tertiary)'
                 }}
@@ -179,21 +179,21 @@ export default function UserProfilePage() {
               </Link>
             ) : currentUser ? (
               <div className="flex gap-3">
-                <button 
+                <button
                   onClick={() => username && toggleFollow(username)}
                   disabled={followLoading}
                   className="flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all active:scale-[0.98] disabled:opacity-50"
-                  style={{ 
+                  style={{
                     backgroundColor: isCurrentlyFollowing ? 'var(--bg-tertiary)' : 'var(--accent)',
                     color: isCurrentlyFollowing ? 'var(--text-primary)' : 'white'
                   }}
                 >
                   {followLoading ? '...' : isCurrentlyFollowing ? 'Following' : 'Follow'}
                 </button>
-                <button 
+                <button
                   onClick={() => setChatOpen(true)}
                   className="px-5 py-2.5 rounded-xl transition-all active:scale-[0.98]"
-                  style={{ 
+                  style={{
                     backgroundColor: 'var(--bg-tertiary)',
                     color: 'var(--text-primary)'
                   }}
@@ -232,23 +232,23 @@ export default function UserProfilePage() {
       </div>
 
       {/* Tabs */}
-      <div 
+      <div
         className="rounded-xl p-1 flex gap-1 mb-6"
         style={{ backgroundColor: 'var(--bg-secondary)' }}
       >
-        <button 
+        <button
           className="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors"
           style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
         >
           Posts
         </button>
-        <button 
+        <button
           className="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors hover:opacity-80"
           style={{ color: 'var(--text-tertiary)' }}
         >
           Likes
         </button>
-        <button 
+        <button
           className="flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors hover:opacity-80"
           style={{ color: 'var(--text-tertiary)' }}
         >
@@ -258,11 +258,11 @@ export default function UserProfilePage() {
 
       {/* Posts Grid */}
       {profile.posts?.length === 0 ? (
-        <div 
+        <div
           className="rounded-2xl p-8 text-center"
           style={{ backgroundColor: 'var(--bg-primary)', boxShadow: 'var(--card-shadow)' }}
         >
-          <div 
+          <div
             className="w-14 h-14 mx-auto mb-3 rounded-full flex items-center justify-center"
             style={{ backgroundColor: 'var(--bg-tertiary)' }}
           >
@@ -280,16 +280,16 @@ export default function UserProfilePage() {
       ) : (
         <div className="grid grid-cols-3 gap-1">
           {profile.posts?.map((post: any) => (
-            <Link 
-              key={post.id} 
-              to={`/posts/${post.slug || post.public_id || post.id}`} 
+            <Link
+              key={post.id}
+              to={`/posts/${post.slug || post.public_id || post.id}`}
               className="aspect-square overflow-hidden relative group"
               style={{ backgroundColor: 'var(--bg-tertiary)' }}
             >
               {post.post_image_url ? (
                 <img src={post.post_image_url} alt="" className="w-full h-full object-cover" />
               ) : (
-                <div 
+                <div
                   className="w-full h-full p-3 flex items-center justify-center"
                   style={{ backgroundColor: 'var(--bg-secondary)' }}
                 >
@@ -302,7 +302,7 @@ export default function UserProfilePage() {
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
                 <div className="flex items-center gap-1 text-white text-sm font-medium">
                   <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                   </svg>
                   {post.likes_count ?? 0}
                 </div>
@@ -311,7 +311,7 @@ export default function UserProfilePage() {
           ))}
         </div>
       )}
-      
+
       {/* Chat Drawer */}
       <ChatDrawer isOpen={chatOpen} onClose={() => setChatOpen(false)} />
     </div>

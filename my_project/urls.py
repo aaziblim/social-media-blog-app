@@ -17,14 +17,19 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, Sp
 
 from django.contrib.sites.models import Site
 from django.db import IntegrityError
+from django.db.utils import ProgrammingError, OperationalError
 
+# Configure default site - wrapped to handle fresh DB (migrations not yet run)
 try:
     site, created = Site.objects.get_or_create(id=1)
-    site.domain = 'my-project-latest.onrender.com'  # Replace with your actual Render domain
+    site.domain = 'my-project-latest.onrender.com'
     site.name = 'Spherespace'
     site.save()
-except IntegrityError as e:
-    print("Site already exists and couldn't be updated:", e)
+except (IntegrityError, ProgrammingError, OperationalError) as e:
+    # ProgrammingError/OperationalError = table doesn't exist yet (fresh Docker DB)
+    # IntegrityError = site already exists
+    pass
+
 
 router = DefaultRouter()
 router.register(r'posts', PostViewSet, basename='post')

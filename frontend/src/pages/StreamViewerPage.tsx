@@ -379,9 +379,98 @@ export default function StreamViewerPage() {
     }
   })
 
-  // End stream mutation
+  // Recording refs
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+
+  // Start recording when live
+  useEffect(() => {
+    if (!stream?.is_live || stream.host.id !== user?.id) return
+
+    const startRecording = async () => {
+      // Wait a bit for stream to be ready
+      await new Promise(r => setTimeout(r, 1000))
+
+      const streamToRecord = videoRef.current?.srcObject as MediaStream
+      if (!streamToRecord) return
+
+      try {
+        const recorder = new MediaRecorder(streamToRecord, {
+          mimeType: 'video/webm;codecs=vp8,opus'
+        })
+
+        chunksRef.current = []
+
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            chunksRef.current.push(e.data)
+          }
+        }
+
+        recorder.start(1000) // Collect chunks every second
+        mediaRecorderRef.current = recorder
+        console.log('Recording started')
+      } catch (err) {
+        console.error('Failed to start recording', err)
+      }
+    }
+
+    startRecording()
+
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop()
+      }
+    }
+  }, [stream?.is_live, stream?.host.id, user?.id])
+
+  // End stream mutation UPDATED
   const endMutation = useMutation({
-    mutationFn: () => endStream(id!),
+    mutationFn: async () => {
+      // 1. Stop recording
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop()
+        // Wait for last chunk
+        await new Promise(r => setTimeout(r, 500))
+      }
+
+      // 2. Create Blob
+      if (chunksRef.current.length > 0) {
+        setIsUploading(true)
+        const blob = new Blob(chunksRef.current, { type: 'video/webm' })
+        const file = new File([blob], `stream-${id}.webm`, { type: 'video/webm' })
+
+        // 3. Upload as Post
+        const formData = new FormData()
+        formData.append('title', `Live Replay: ${stream?.title}`)
+        formData.append('content', stream?.description || 'Livestream recording')
+        formData.append('post_video', file)
+
+        // Use axios directly to upload
+        try {
+          // Import needed here or assume global axios/api
+          // We need to use proper api import, so let's stick to using the createPost function but it takes specific struct
+          // Just using plain fetch/axios for this specific big upload to ensure custom handling if needed, 
+          // but actually createPost from api.ts is safer.
+          // Let's use api.createPost
+          const { createPost } = await import('../api')
+          await createPost({
+            title: `Live Replay: ${stream?.title || 'Untitled Stream'}`,
+            content: stream?.description || 'Livestream recording',
+            post_video: file
+          })
+          console.log('Recording uploaded successfully')
+        } catch (err) {
+          console.error('Failed to upload recording', err)
+        } finally {
+          setIsUploading(false)
+        }
+      }
+
+      // 4. Actually End Stream API call
+      return endStream(id!)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stream', id] })
       setEndModalOpen(false)
@@ -517,14 +606,14 @@ export default function StreamViewerPage() {
                 <p className="text-white/70 text-sm px-4">
                   {stream.is_live
                     ? (cameraError ? cameraError : 'Connecting to video feed...')
-                    : 'Stream has ended'}
+                    : 'Stream has ended (No recording available)'}
                 </p>
                 {isHost && !stream.is_live && (
                   <button
                     onClick={() => setDeleteModalOpen(true)}
                     className="mt-4 px-6 py-2.5 rounded-full bg-red-500/20 text-red-500 font-bold text-sm border border-red-500/30 transition-all hover:bg-red-500 hover:text-white hover:border-transparent active:scale-95"
                   >
-                    Delete Recording
+                    Delete History
                   </button>
                 )}
               </div>
@@ -706,7 +795,7 @@ export default function StreamViewerPage() {
                       disabled={endMutation.isPending}
                       className="h-9 md:h-10 px-3 md:px-4 rounded-full bg-red-500 text-white font-medium text-xs md:text-sm transition-all hover:bg-red-600 active:scale-95 disabled:opacity-50"
                     >
-                      {endMutation.isPending ? '...' : 'End'}
+                      {endMutation.isPending || isUploading ? 'Saving...' : 'End & Save'}
                     </button>
                   )}
                 </div>

@@ -608,6 +608,11 @@ class LivestreamViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = Livestream.objects.select_related('host', 'host__profile')
         
+        # For detail views (retrieve, delete, etc.), return all streams
+        # so we don't get 404s on valid IDs just because they are old/ended.
+        if self.detail:
+            return queryset
+        
         # Filter by mine (user's own streams)
         mine_filter = self.request.query_params.get('mine')
         if mine_filter == 'true' and self.request.user.is_authenticated:

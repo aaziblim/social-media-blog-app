@@ -513,7 +513,7 @@ export default function LivePage() {
                 </Link>
                 <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteTarget(stream) }}
-                  className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                   style={{ backgroundColor: 'rgba(239, 68, 68, 0.9)' }}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} className="w-4 h-4">

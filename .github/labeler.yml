@@ -1,0 +1,59 @@
+# =============================================================================
+# PR Labeler Configuration
+# =============================================================================
+# Maps file paths to labels for automatic PR labeling
+# =============================================================================
+
+# Frontend changes
+frontend:
+  - changed-files:
+      - any-glob-to-any-file: 'frontend/**/*'
+
+# Backend changes
+backend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '*.py'
+          - 'blog/**/*'
+          - 'users/**/*'
+          - 'payments/**/*'
+          - 'my_project/**/*'
+
+# Documentation changes
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.md'
+          - 'docs/**/*'
+
+# CI/CD changes
+ci/cd:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**/*'
+          - 'Dockerfile*'
+          - 'docker-compose*.yml'
+
+# Configuration changes
+config:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '*.json'
+          - '*.yml'
+          - '*.yaml'
+          - '*.toml'
+          - '*.cfg'
+          - '.env*'
+
+# Database/migrations
+database:
+  - changed-files:
+      - any-glob-to-any-file: '**/migrations/**/*'
+
+# Tests
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/tests/**/*'
+          - '**/test_*.py'
+          - '**/*_test.py'
