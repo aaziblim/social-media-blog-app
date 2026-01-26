@@ -131,7 +131,7 @@ function useSpheresEngine(slug: string, currentUser: any) {
 
     const socketRef = useRef<WebSocket | null>(null)
     const lastUpdateRef = useRef<number>(0)
-    const requestRef = useRef<number>()
+    const requestRef = useRef<number>(0)
 
     // Audio Refs
     const audioContextRef = useRef<AudioContext | null>(null)

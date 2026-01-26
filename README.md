@@ -19,6 +19,40 @@ Spherespace combines a blazing-fast React + TypeScript frontend with a robust Dj
 
 ---
 
+## 📸 Screenshots
+
+<div align="center">
+
+### 🏠 Homepage
+*Main feed with posts, trending topics, activity streaks, and community discovery*
+
+<img src="docs/screenshots/homepage.png" alt="Spherespace Homepage" width="800"/>
+
+---
+
+### 🌐 Community Page
+*Dedicated community spaces with custom banners, member management, and focused discussions*
+
+<img src="docs/screenshots/community.png" alt="Community Page" width="800"/>
+
+---
+
+### 📹 Live Streaming
+*Real-time broadcasting with live chat, viewer count, and host controls*
+
+<img src="docs/screenshots/livestream.png" alt="Live Streaming Page" width="800"/>
+
+---
+
+### 🔌 API Documentation
+*Interactive Swagger UI for exploring and testing all REST API endpoints*
+
+<img src="docs/screenshots/api-docs.png" alt="API Documentation" width="800"/>
+
+</div>
+
+---
+
 ## 🏗️ Architecture
 
 ```mermaid
